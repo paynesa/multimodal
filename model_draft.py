@@ -64,16 +64,32 @@ class MultimodalEmbedding:
                 self.model = load_model(self.args.l)
             
             learned_embedding = self.model.predict(self.x_train)
+            return learned_embedding
             # TODO: figure out how to incorporate learned image embeddings and fused 
             # embeddings into the dataset
         except:
             raise Exception("Error loading model")
 
-    def cosine_similarity(word1, word2):
-        dot_product = np.dot(word1, word2)
-        length_word1 = np.linalg.norm(word1)
-        length_word2 = np.linalg.norm(word2)
-        return dot_product/(length_word1 * length_word2)
+def get_simlex():
+    simlex = pd.read_csv('/scratch/mnguyen7/re_experiments/evaluation/SimLex-999/SimLex-999.txt', sep="\t", header=0)
+    return simlex.as_matrix()
+
+def word_sim():
+    wordsim = pd.read_csv('/scratch/mnguyen7/re_experiments/evaluation/WordSim/combined.csv')
+    return wordsim.as_matrix()
+
+def compute_pair_sim(word1, word2): 
+    dot_product = np.dot(word1, word2)
+    length_word1 = np.linalg.norm(word1)
+    length_word2 = np.linalg.norm(word2)
+    return dot_product/(length_word1 * length_word2)
+
+def compute_sim(learned_embedding, eval_set):
+    # TODO: figure out how to incorporate cosine similarity into eval set 
+    # TODO: figure out how to handle words in the eval set that are not in the training set 
+    # TODO: 
+    for i in range(eval_set.shape[0]):
+        word1 = 
 
 def main():
     args = parse_args()
@@ -82,10 +98,10 @@ def main():
     # train, save and load model in one go
     if args.s:
         model.start_training(args.model)
-        model.predict()
+        embedding = model.predict()
     # load an old model for prediction
     elif args.l:
-        model.predict()
+        embedding = model.predict()
 
 if __name__ == '__main__':
     main()
