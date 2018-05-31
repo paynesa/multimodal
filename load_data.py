@@ -3,10 +3,17 @@ import pickle
 import pandas as pd 
 from argparse import ArgumentParser
 import os
+import pathlib
+
+"""
+Purpose:
+  - Create the training set (x_train, y_train)
+  - Create a directory for each word, saving word embedding and image embedding 
+"""
 
 def create_word_embedding():
     """
-    Return a dictionary, keys: words, values: word vectors 
+    Return a dictionary from Glove word vectors, keys: words, values: word vectors 
     """
     # load Glove word vectors 
     GLOVE_300D = "/scratch/mnguyen7/re_experiments/glove.840B.300d.txt"
@@ -29,6 +36,10 @@ def create_word_embedding():
 
 # TODO: test the training set. x: word vector, y: image vector  
 def create_image_embedding():
+    """
+    create one image embedding for each word by average pooling all image feature vectors
+    @return img_list: a numpy array of image embeddings 
+    """
     # read the file that contains words and paths to image directories 
     words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
     for i in range(words.shape[0]):
@@ -45,13 +56,20 @@ def create_image_embedding():
             # average pooling to create one single image embedding
             average_embedding = img_embedding.sum(axis=1) / img_embedding.shape[1]
             if i == 0:
-                y_train = average_embedding
+                img_list = average_embedding
             else:
-                y_train = np.stack((y_train, average_embedding), axis=0)
+                img_list = np.stack((y_train, average_embedding), axis=0)
 
-    return y_train
+    return img_list
 
 def create_train_set():
+    """
+    for each word, if its Glove word vector exists and its image vector does not consists only of NaN values, 
+    the word and image vectors are saved to the word's directory
+
+    create the train set (x_train, y_train)
+    @return x_train, y_train
+    """
     words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
     word_dict = create_word_embedding()
     img_list = create_image_embedding()
@@ -84,6 +102,10 @@ def create_train_set():
     return x_train, y_train
 
 def parse_args():
+    """
+    parse parameters set by user
+    @return x_train, y_train, args (the parameters)
+    """
     parser = ArgumentParser()
     parser.add_argument("model", default="neural", type=str, help="[linear, neural]")
     parser.add_argument("-lr", default=0.1, type=int, help="learning rate, default=0.1 for both models")

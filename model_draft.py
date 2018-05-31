@@ -7,7 +7,11 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout
 from keras.optimizers import SGD
 from keras.models import load_model
+
 import numpy as np
+import pandas as pd
+from scipy import stats
+import os
 
 class MultimodalEmbedding:
     def _init__(self, x_train, y_train, args):
@@ -32,7 +36,7 @@ class MultimodalEmbedding:
         self.model.add(Dense(128))
         self.model.summary()
 
-        sgd = optimizers.SGD(lr=0.1)
+        sgd = optimizers.SGD(lr=self.args.lr)
         self.model.compile(optimizer=sgd, loss="mean_squared_error", metrics=["accuracy"])
     
     def start_training(self, model):
@@ -65,8 +69,6 @@ class MultimodalEmbedding:
             
             learned_embedding = self.model.predict(self.x_train)
             return learned_embedding
-            # TODO: figure out how to incorporate learned image embeddings and fused 
-            # embeddings into the dataset
         except:
             raise Exception("Error loading model")
 
@@ -84,16 +86,25 @@ def compute_pair_sim(word1, word2):
     length_word2 = np.linalg.norm(word2)
     return dot_product/(length_word1 * length_word2)
 
-def compute_sim(learned_embedding, eval_set):
-    # TODO: figure out how to incorporate cosine similarity into eval set 
-    # TODO: figure out how to handle words in the eval set that are not in the training set 
-    # TODO: 
+def compute_sim(word_dict, eval_set):
+    # TODO: figure out how to handle words in the eval set that are not in the training set  
+    sim = []
     for i in range(eval_set.shape[0]):
-        word1 = 
+        if os.path.exists(eval_set[i][0]) and os.path.exists(eval_set[i][1]):
+            embedding1 = word_dict[eval_set[i][0]]
+            embedding2 = word_dict[eval_set[i][1]]
+            pair_sim = compute_pair_sim(embedding1, embedding2)
+            sim.append(pair_sim)
+    sim = np.asarray(sim) 
+    
+    return sim 
+
+def evaluate_cor(model_sim, human_sim):
+    cor, pval = stats.spearmanr(model_sim, human_sim)
+    return cor, pval
 
 def main():
     args = parse_args()
-    print(args)
     model = MultimodalEmbedding(x_train, y_train, args)
     # train, save and load model in one go
     if args.s:
@@ -103,6 +114,27 @@ def main():
     elif args.l:
         embedding = model.predict()
 
+    # save the learned embedding to word's directory 
+    words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
+    word_dict = {}
+    for i in range(words.shape[0]):
+        if os.path.exists(words[i][0]):
+            with open(words[i][0] + "learned" + "ex1.p", 'wb') as fp:
+                pickle.dump(embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
+            word_dict[words[i][0]] = embedding[i]
+    
+    # evaluate against simlex
+    simlex = get_simlex()
+    model_sim = compute_sim(word_dict, simlex)
+    cor, pval = evaluate_cor(model_sim, simlex[:,3])
+    print("Correlation for SimLex: {}, P-value: {}".format(cor, pval))
+
+    #evaluate against wordsim
+    wordsim = get_wordsim()
+    model_sim = compute_sim(word_dict, wordsim)
+    cor, pval = evaluate_cor(model_sim, wordsim[:,2])
+    print("Correlation for WordSim: {}, P-value: {}".format(cor, pval))
+    
 if __name__ == '__main__':
     main()
 
