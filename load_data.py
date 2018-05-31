@@ -1,8 +1,10 @@
 import numpy as np
 import pickle
+import pandas as pd 
 from argparse import ArgumentParser
+import os
 
-def build_embedding():
+def create_word_embedding():
     """
     Return a dictionary, keys: words, values: word vectors 
     """
@@ -25,9 +27,61 @@ def build_embedding():
     
     return word_vectors_gl
 
-# TODO: create a training set. x: word vector, y: image vector
-# def create_train_set:
-    # embedding = build_embedding()
+# TODO: test the training set. x: word vector, y: image vector  
+def create_image_embedding():
+    # read the file that contains words and paths to image directories 
+    words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
+    for i in range(words.shape[0]):
+        directory = words[i][1]
+        for f in os.listdir(directory):
+            # open the pickle file that contains image embeddings
+            with open(f, 'rb') as fp:
+                img = pickle.load(fb)
+                try:
+                    img_embedding = np.stack((img_embedding, img), axis=-1)
+                except:
+                    img_embedding = img
+
+            # average pooling to create one single image embedding
+            average_embedding = img_embedding.sum(axis=1) / img_embedding.shape[1]
+            if i == 0:
+                y_train = average_embedding
+            else:
+                y_train = np.stack((y_train, average_embedding), axis=0)
+
+    return y_train
+
+def create_train_set():
+    words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
+    word_dict = create_word_embedding()
+    img_list = create_image_embedding()
+
+    for i in range(words.shape[0]):
+        # create a directory for each word 
+        pathlib.Path(words[i][0]).mkdir()
+        word_embedding = word_dict.get(words[i][0])
+        img_embedding = img_list[i]
+        
+        # check if a word has valid word vectors and image vectors 
+        # valid: word_vector exists, image vectors doesn't contain all NaNs
+        check_nan = np.isnan(img_embedding)
+        all_nan = check_nan[check_nan==True].shape[0]
+        if word_embedding is not None and all_nan == img_embedding.shape[0]:
+            # save word and image vectors to corresponding words' directories
+            with open(words[i][0] + 'word.p', 'wb') as fp:
+                pickle.dump(word_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(words[i][0] + 'image.p', 'wb') as fp:
+                pickle.dump(img_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
+            
+            # add to x_train and y_train
+            try:
+                x_train = np.stack((x_train, word_embedding))
+                y_train = np.stack((y_train, img_embedding))
+            except:
+                x_train = word_embedding
+                y_train = img_embedding 
+    
+    return x_train, y_train
 
 def parse_args():
     parser = ArgumentParser()
@@ -41,7 +95,5 @@ def parse_args():
     # train_set = create_train_set()
     return args
     # return train_set, args
-    
-    return train_set, args
 
 parse_args()
