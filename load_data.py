@@ -4,13 +4,14 @@ import pandas as pd
 from argparse import ArgumentParser
 import os
 import pathlib
+from pymagnitude import *
 
 """
 Purpose:
   - Create the training set (x_train, y_train)
   - Create a directory for each word, saving word embedding and image embedding 
 """
-
+# don't even need this anymore hahaha
 def create_word_embedding():
     """
     Return a dictionary from Glove word vectors, keys: words, values: word vectors 
@@ -71,20 +72,21 @@ def create_train_set():
     @return x_train, y_train
     """
     words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
-    word_dict = create_word_embedding()
+    word_dict = Magnitude('/path/to/glove.magnitude')
     img_list = create_image_embedding()
 
     for i in range(words.shape[0]):
         # create a directory for each word 
         pathlib.Path(words[i][0]).mkdir()
-        word_embedding = word_dict.get(words[i][0])
+        # handle OOV words
+        word_embedding = word_dict.query(words[i][0])
         img_embedding = img_list[i]
         
-        # check if a word has valid word vectors and image vectors 
-        # valid: word_vector exists, image vectors doesn't contain all NaNs
+        # check if a word has valid image vectors 
+        # valid: image vectors doesn't contain all NaNs
         check_nan = np.isnan(img_embedding)
         all_nan = check_nan[check_nan==True].shape[0]
-        if word_embedding is not None and all_nan == img_embedding.shape[0]:
+        if all_nan == img_embedding.shape[0]:
             # save word and image vectors to corresponding words' directories
             with open(words[i][0] + '/word.p', 'wb') as fp:
                 pickle.dump(word_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
