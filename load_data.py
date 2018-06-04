@@ -86,9 +86,9 @@ def create_train_set():
         all_nan = check_nan[check_nan==True].shape[0]
         if word_embedding is not None and all_nan == img_embedding.shape[0]:
             # save word and image vectors to corresponding words' directories
-            with open(words[i][0] + 'word.p', 'wb') as fp:
+            with open(words[i][0] + '/word.p', 'wb') as fp:
                 pickle.dump(word_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
-            with open(words[i][0] + 'image.p', 'wb') as fp:
+            with open(words[i][0] + '/image.p', 'wb') as fp:
                 pickle.dump(img_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
             
             # add to x_train and y_train

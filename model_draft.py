@@ -2,6 +2,7 @@
 A playground for building models
 """
 from load_data import parse_args
+from load_data import create_word_embedding
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
@@ -14,6 +15,9 @@ from scipy import stats
 import os
 
 class MultimodalEmbedding:
+    """
+    This class builds a linear model and a neural net that learns the mapping from word embeddings to image embeddings
+    """
     def _init__(self, x_train, y_train, args):
         self.x_train = x_train 
         self.y_train = y_train
@@ -58,7 +62,10 @@ class MultimodalEmbedding:
         except:
             raise Exception("Error saving model")
 
-    def predict(self):
+    def predict(self, x):
+        """
+        @param x: a set of word embeddings
+        """
         try:
             # self.args.s: train, save, then load the model in one go 
             # self.args.l: load an old model for prediction
@@ -67,27 +74,97 @@ class MultimodalEmbedding:
             elif self.args.l:
                 self.model = load_model(self.args.l)
             
-            learned_embedding = self.model.predict(self.x_train)
+            learned_embedding = self.model.predict(x)
             return learned_embedding
         except:
             raise Exception("Error loading model")
 
+def create_fused_embedding(words, word_dict):
+    """
+    concatenate word embeddings with learned embeddings
+    @param words: the dataset of words in the training dataset
+    @param word_dict: dictionary: keys: words, values: learned embeddings
+    @return the concatenated embeddings
+    """
+    fused_word_dict = {}
+    for i in range(words.shape[0]): 
+        if os.path.exists(words[i][0]):
+            with open(words[i][0] + "/word.p", 'rb') as fp:
+                word_embedding = pickle.load(fp)
+            learned_embedding = word_dict[words[i][0]]
+            # concatenate word embedding with L2-normalized learned embedding 
+            norm_learned = np.linalg.norm(learned_embedding, axis=1)
+            # TODO: norm_learned == 0??
+            norm_inv = 1 / norm_learned
+            learned_embedding = np.multiply(learned_embedding, norm_inv[np.newaxis,:])
+            fused_embedding = np.zeros((428,))
+            fused_embedding[:300] = word_embedding
+            fused_embedding[300:] = learned_embedding
+
+            fused_word_dict[words[i][0]] = fused_embedding[i]
+    
+    return fused_word_dict
+
 def get_simlex():
+    """
+    SimLex-999 
+    """
     simlex = pd.read_csv('/scratch/mnguyen7/re_experiments/evaluation/SimLex-999/SimLex-999.txt', sep="\t", header=0)
     return simlex.as_matrix()
 
-def word_sim():
+def get_wordsim_all():
+    """
+    WordSim-353
+    """
     wordsim = pd.read_csv('/scratch/mnguyen7/re_experiments/evaluation/WordSim/combined.csv')
     return wordsim.as_matrix()
 
+def get_semvis():
+    """
+    SemSim / VisSim
+    """
+    semsim = pd.read_csv('/scratch/mnguyen7/re_experiments/evaluation/SemSim/SemSim.txt', sep='\t', header=0)
+    semsim['WORD1'], semsim['WORD2'] = semsim['WORDPAIR'].str.split('#', 1).str
+    semsim = semsim[['WORD1', 'WORD2', 'SEMANTIC', 'VISUAL', 'WORDPAIR']]
+    
+    return semsim.as_matrix()
+
+def create_zs_set(eval_set):
+    """
+    Zero-shot: dataset that contains words with no visual info
+    VIS: dataset that contains words with visual info
+    """
+    for i in range(eval_set.shape[0]):
+        if not os.path.exists(eval_set[i][0]) or not os.path.exists(eval_set[i][1]):
+            word_dict = create_word_embedding()
+            word1 = word_dict.get(eval_set[i][0]) 
+            word2 = word_dict.get(eval_set[i][1])
+            if word1 is not None and word2 is not None:
+                try: 
+                    zs_set = np.stack((zs_set, word1))
+                    zs_set = np.stack((zs_set, word2))
+                except:
+                    zs_set = word1
+                    zs_set = np.stack((zs_set, word2))
+
 def compute_pair_sim(word1, word2): 
+    """
+    compute cosine similarity between two words
+    """
     dot_product = np.dot(word1, word2)
     length_word1 = np.linalg.norm(word1)
     length_word2 = np.linalg.norm(word2)
     return dot_product/(length_word1 * length_word2)
 
 def compute_sim(word_dict, eval_set):
+    """
+    compute similarity for all words in the evaluation set (maybe?)
+    @param word_dict: dictionary: keys: words, values: learned embeddings
+    @param eval_set: the evaluation set 
+    @return a numpy array of word similarity
+    """
     # TODO: figure out how to handle words in the eval set that are not in the training set  
+    # TODO: might need to separate eval set into vis and zs
     sim = []
     for i in range(eval_set.shape[0]):
         if os.path.exists(eval_set[i][0]) and os.path.exists(eval_set[i][1]):
@@ -100,41 +177,50 @@ def compute_sim(word_dict, eval_set):
     return sim 
 
 def evaluate_cor(model_sim, human_sim):
+    """
+    Compute Spearman rank correlation between two sets of similarity ratings
+    @param model_sim: similarity ratings computed by model
+    @param human_sim: similarity ratings rated by humans
+    @return rank correlation and its P-value
+    """
     cor, pval = stats.spearmanr(model_sim, human_sim)
     return cor, pval
 
 def main():
     args = parse_args()
     model = MultimodalEmbedding(x_train, y_train, args)
+    zs_set = create_zs_set()
     # train, save and load model in one go
     if args.s:
         model.start_training(args.model)
-        embedding = model.predict()
+        vis_embedding = model.predict(x_train)
+        zs_embedding = model.predict(zs_set)
     # load an old model for prediction
     elif args.l:
-        embedding = model.predict()
+        vis_embedding = model.predict(x_train)
 
-    # save the learned embedding to word's directory 
+    # save vis embedding to word's directory 
     words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
     word_dict = {}
+
     for i in range(words.shape[0]):
         if os.path.exists(words[i][0]):
-            with open(words[i][0] + "learned" + "ex1.p", 'wb') as fp:
+            with open(words[i][0] + "vis" + "ex1.p", 'wb') as fp:
                 pickle.dump(embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
-            word_dict[words[i][0]] = embedding[i]
+            word_dict[words[i][0]] = vis_embedding[i]
     
     # evaluate against simlex
     simlex = get_simlex()
     model_sim = compute_sim(word_dict, simlex)
     cor, pval = evaluate_cor(model_sim, simlex[:,3])
-    print("Correlation for SimLex: {}, P-value: {}".format(cor, pval))
+    print("Correlation for SimLex (VIS): {}, P-value: {}".format(cor, pval))
 
     #evaluate against wordsim
-    wordsim = get_wordsim()
+    wordsim = get_wordsim_all()
     model_sim = compute_sim(word_dict, wordsim)
     cor, pval = evaluate_cor(model_sim, wordsim[:,2])
-    print("Correlation for WordSim: {}, P-value: {}".format(cor, pval))
-    
+    print("Correlation for WordSim (VIS): {}, P-value: {}".format(cor, pval))
+
 if __name__ == '__main__':
     main()
 
