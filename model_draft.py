@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 import os
+# from pymagnitude import *
 
 class MultimodalEmbedding:
     """
@@ -129,23 +130,60 @@ def get_semvis():
     
     return semsim.as_matrix()
 
-def create_zs_set(eval_set):
+def create_zs_set_individual(eval_set):
     """
     Zero-shot: dataset that contains words with no visual info
     VIS: dataset that contains words with visual info
     """
+    img_dict = Magnitude("path/to/image.magnitude")
+    word_dict = Magnitude("path/to/word.magnitude")
+    # list of all words in the eval_set 
+    zs_words = []
+    vis_words = []
+
     for i in range(eval_set.shape[0]):
-        if not os.path.exists(eval_set[i][0]) or not os.path.exists(eval_set[i][1]):
-            word_dict = create_word_embedding()
-            word1 = word_dict.get(eval_set[i][0]) 
-            word2 = word_dict.get(eval_set[i][1])
-            if word1 is not None and word2 is not None:
-                try: 
-                    zs_set = np.stack((zs_set, word1))
-                    zs_set = np.stack((zs_set, word2))
-                except:
-                    zs_set = word1
-                    zs_set = np.stack((zs_set, word2))
+        # check if image vectors exist for both words
+        word1 = word_dict.query(eval_set[i][0]) 
+        word2 = word_dict.query(eval_set[i][1])
+        if img_dict.query(eval_set[i][0]) == False or img_dict.query(eval_set[i][1]) == False: 
+            # add word to zs_words 
+            zs_words.append(eval_set[i][0])
+            try: 
+                zs_set = np.vstack([zs_set, word1])
+                zs_set = np.vstack([zs_set, word2])
+            except:
+                zs_set = word1
+                zs_set = np.vstack([zs_set, word2])
+        else:  
+            # add word to vis_words 
+            vis_words.append(eval_set[i][0])
+            try: 
+                vis_set = np.vstack([vis_set, word1])
+                vis_set = np.vstack([vis_set, word2])
+            except:
+                vis_set = word1
+                vis_set = np.vstack([vis_set, word2])
+    return zs_set, vis_set, zs_words, vis_words
+
+def create_zs_set_all(eval_set_list):
+    """
+    Aggregate VIS and ZS words of all test sets into 2 big sets
+    """
+    zs_words_all = []
+    vis_words_all = []
+
+    for s in eval_set_list:
+        zs, vis, zs_words, vis_words = create_zs_set_individual(s)
+        # aggregate zs, vis words of all eval sets
+        zs_words_all += zs_words
+        vis_words_all += vis_words
+        try:
+            zs_set = np.vstack([zs_set, zs])
+            vis_set = np.vstack([vis_set, vis])
+        except:
+            zs_set = zs 
+            vis_set = vis
+    return zs_set, vis_set, zs_words_all, vis_words_all
 
 def compute_pair_sim(word1, word2): 
     """
@@ -189,26 +227,45 @@ def evaluate_cor(model_sim, human_sim):
 def main():
     args = parse_args()
     model = MultimodalEmbedding(x_train, y_train, args)
-    zs_set = create_zs_set()
+    
+    # load evaluation sets
+    wordsim = get_wordsim_all()
+    simlex = get_simlex()
+    semvis = get_semvis()
+    semsim = semvis[:,2]
+    vissim = semvis[:,3]
+    eval_set_list = [wordsim, simlex, semsim, vissim]
+    zs_set, vis_set, zs_words, vis_words = create_zs_set_all(eval_set_list)
+
     # train, save and load model in one go
     if args.s:
         model.start_training(args.model)
-        vis_embedding = model.predict(x_train)
+        vis_embedding = model.predict(vis_set)
         zs_embedding = model.predict(zs_set)
     # load an old model for prediction
     elif args.l:
-        vis_embedding = model.predict(x_train)
+        vis_embedding = model.predict(vis_set)
+        zs_embedding = model.predict(zs_set)
 
     # save vis embedding to word's directory 
     words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
     word_dict = {}
-
-    for i in range(words.shape[0]):
-        if os.path.exists(words[i][0]):
-            with open(words[i][0] + "vis" + "ex1.p", 'wb') as fp:
-                pickle.dump(embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
-            word_dict[words[i][0]] = vis_embedding[i]
     
+    img_dict = Magnitude("/path/to/image.magnitude")
+    # create a directory for each word, save predicted embeddings
+    for i in range(len(zs_words_all)):
+        folder_path = zs_words_all[i] + " (zs)"
+        pathlib.Path(folder_name).mkdir()
+        with open(zs_words_all[i] + " (zs)/" + "ex1.p", 'wb') as fp:
+          pickle.dump(zs_embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+    for i in range(len(vis_words_all)):
+        folder_path = vis_words_all[i] + " (vis)"
+        pathlib.Path(folder_name).mkdir()
+        with open(vis_words_all[i] + " (vis)/" + "ex1.p", 'wb') as fp:
+            pickle.dump(vis_embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    word_dict[words[i][0]] = vis_embedding[i]
     # evaluate against simlex
     simlex = get_simlex()
     model_sim = compute_sim(word_dict, simlex)
