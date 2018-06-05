@@ -56,16 +56,19 @@ def create_image_embedding():
 
             # average pooling to create one single image embedding
             average_embedding = img_embedding.sum(axis=1) / img_embedding.shape[1]
+            average_embedding.astype("<U100")
+            average_embedding = np.insert(average_embedding, 0, words[i][1])
             if i == 0:
                 img_list = average_embedding
             else:
-                img_list = np.stack((y_train, average_embedding), axis=0)
+                img_list = np.vstack((img_list, average_embedding))
 
-    return img_list
+            # save all embeddings to txt, convert txt to magnitude in cmd line 
+            np.savetxt("img_embedding.txt", img_list)
 
 def create_train_set():
     """
-    for each word, if its Glove word vector exists and its image vector does not consists only of NaN values, 
+    for each word, if its image vector does not consists only of NaN values, 
     the word and image vectors are saved to the word's directory
 
     create the train set (x_train, y_train)
@@ -73,30 +76,32 @@ def create_train_set():
     """
     words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
     word_dict = Magnitude('/path/to/glove.magnitude')
-    img_list = create_image_embedding()
+    create_image_embedding()
+    img_dict = Magnitude('/path/to/image.magnitude')
 
     for i in range(words.shape[0]):
-        # create a directory for each word 
-        pathlib.Path(words[i][0]).mkdir()
+        # create a directory for each word
+        # pathlib.Path(words[i][0]).mkdir()
         # handle OOV words
         word_embedding = word_dict.query(words[i][0])
-        img_embedding = img_list[i]
+        img_embedding = img_dict.query(words[i][0])
         
         # check if a word has valid image vectors 
         # valid: image vectors doesn't contain all NaNs
         check_nan = np.isnan(img_embedding)
         all_nan = check_nan[check_nan==True].shape[0]
         if all_nan == img_embedding.shape[0]:
+            # with Magnitude, saving img and word vectors is not necessary
             # save word and image vectors to corresponding words' directories
-            with open(words[i][0] + '/word.p', 'wb') as fp:
-                pickle.dump(word_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
-            with open(words[i][0] + '/image.p', 'wb') as fp:
-                pickle.dump(img_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
+            # with open(words[i][0] + '/word.p', 'wb') as fp:
+                # pickle.dump(word_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
+            # with open(words[i][0] + '/image.p', 'wb') as fp:
+                # pickle.dump(img_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
             
             # add to x_train and y_train
             try:
-                x_train = np.stack((x_train, word_embedding))
-                y_train = np.stack((y_train, img_embedding))
+                x_train = np.vstack([x_train, word_embedding])
+                y_train = np.vstack([y_train, img_embedding])
             except:
                 x_train = word_embedding
                 y_train = img_embedding 
