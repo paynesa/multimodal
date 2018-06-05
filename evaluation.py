@@ -14,11 +14,11 @@ def get_wordsim():
 
 def rank_cor(): 
     simlex = get_simlex()
-    #print(simlex[:,3])
-    print(get_wordsim()[:,2])
+    print(np.append(simlex[:,0], simlex[:,1]))
+    #print(get_wordsim()[:,2])
     # compute spearman correlation 
     cor, pval = stats.spearmanr(simlex[:,3], simlex[:,4])
-    print(cor)
-    print(pval)
+    #print(cor)
+    #print(pval)
 
 rank_cor()

@@ -56,7 +56,7 @@ def create_image_embedding():
 
             # average pooling to create one single image embedding
             average_embedding = img_embedding.sum(axis=1) / img_embedding.shape[1]
-            average_embedding.astype("<U100")
+            average_embedding = average_embedding.astype("<U100")
             average_embedding = np.insert(average_embedding, 0, words[i][1])
             if i == 0:
                 img_list = average_embedding
@@ -64,7 +64,7 @@ def create_image_embedding():
                 img_list = np.vstack((img_list, average_embedding))
 
             # save all embeddings to txt, convert txt to magnitude in cmd line 
-            np.savetxt("img_embedding.txt", img_list)
+            np.savetxt("img_embedding.txt", img_list, fmt="%s")
 
 def create_train_set():
     """
@@ -106,7 +106,9 @@ def create_train_set():
                 x_train = word_embedding
                 y_train = img_embedding 
     
-    return x_train, y_train
+    # TODO: format??
+    np.savetxt("x_train.txt", x_train)
+    np.savetxt("y_train.txt", y_train)
 
 def parse_args():
     """

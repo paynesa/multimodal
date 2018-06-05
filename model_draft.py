@@ -132,8 +132,8 @@ def get_semvis():
 
 def create_zs_set_individual(eval_set):
     """
-    Zero-shot: dataset that contains words with no visual info
-    VIS: dataset that contains words with visual info
+    Zero-shot: dataset that contains word embeddings of words with no visual info
+    VIS: dataset that contains word embeddings of words with visual info
     """
     img_dict = Magnitude("path/to/image.magnitude")
     word_dict = Magnitude("path/to/word.magnitude")
@@ -207,23 +207,27 @@ def compute_pair_sim(word1, word2):
 
 def compute_sim(word_dict, eval_set):
     """
-    compute similarity for all words in the evaluation set (maybe?)
+    compute similarity for all words in the evaluation set
     @param word_dict: dictionary: keys: words, values: learned embeddings
     @param eval_set: the evaluation set 
     @return a numpy array of word similarity
     """
-    # TODO: figure out how to handle words in the eval set that are not in the training set  
-    # TODO: might need to separate eval set into vis and zs
-    sim = []
+    zs_sim = []
+    vis_sim = []
+    img_dict = Magnitude("image.magnitude")
     for i in range(eval_set.shape[0]):
-        if os.path.exists(eval_set[i][0]) and os.path.exists(eval_set[i][1]):
-            embedding1 = word_dict[eval_set[i][0]]
-            embedding2 = word_dict[eval_set[i][1]]
-            pair_sim = compute_pair_sim(embedding1, embedding2)
-            sim.append(pair_sim)
-    sim = np.asarray(sim) 
-    
-    return sim 
+        embedding1 = word_dict[eval_set[i][0]]
+        embedding2 = word_dict[eval_set[i][1]]
+        pair_sim = compute_pair_sim(embedding1, embedding2)
+        # if this word is ZS 
+        if img_dict.query(eval_set[i][0]) == False or img_dict.query(eval_set[i][1]) == False:
+            zs_sim.append(pair_sim)
+        else:
+            # TODO: split human ratings for zs and vis, then save them 
+            vis_sim.append(pair_sim)
+    zs_sim = np.asarray(zs_sim) 
+    vis_sim = np.asarray(vis_sim)
+    return zs_sim, vis_sim
 
 def evaluate_cor(model_sim, human_sim):
     """
@@ -237,6 +241,10 @@ def evaluate_cor(model_sim, human_sim):
 
 def main():
     args = parse_args()
+    if args.s == None and args.l == None:
+        raise Exception("Either save or load a model")
+    x_train = read_csv("x_train.txt", sep=" ", header=None)
+    y_train = read_csv("y_train.txt", sep=" ", header=None)
     model = MultimodalEmbedding(x_train, y_train, args)
     
     # load evaluation sets
@@ -248,25 +256,21 @@ def main():
     eval_set_list = [wordsim, simlex, semsim, vissim]
     zs_set, vis_set, zs_words, vis_words = create_zs_set_all(eval_set_list)
 
-    # train, save and load model in one go
+    # if args.s: train, save and load model in one go
+    # if args.l: load an old model for prediction
     if args.s:
         model.start_training(args.model)
-        vis_embedding = model.predict(vis_set)
-        zs_embedding = model.predict(zs_set)
-    # load an old model for prediction
-    elif args.l:
-        vis_embedding = model.predict(vis_set)
-        zs_embedding = model.predict(zs_set)
+    vis_embedding = model.predict(vis_set)
+    zs_embedding = model.predict(zs_set)
 
     # save embeddings to word's directory and accumulate all words into a word_dict dictionary
-    words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
     word_dict = {}
-    word_dict = save_prediction(zs_list_all, "zs", zs_embedding, word_dict)
-    word_dict = save_prediction(vis_list_all, "vis", vis_embedding, word_dict)
+    word_dict = save_prediction(zs_words, "zs", zs_embedding, word_dict)
+    word_dict = save_prediction(vis_words, "vis", vis_embedding, word_dict)
     
     # evaluate against simlex
     simlex = get_simlex()
-    model_sim = compute_sim(word_dict, simlex)
+    zs_sim, vis_sim = compute_sim(word_dict, simlex)
     cor, pval = evaluate_cor(model_sim, simlex[:,3])
     print("Correlation for SimLex (VIS): {}, P-value: {}".format(cor, pval))
 
