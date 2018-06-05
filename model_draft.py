@@ -185,6 +185,17 @@ def create_zs_set_all(eval_set_list):
             vis_set = vis
     return zs_set, vis_set, zs_words_all, vis_words_all
 
+def save_prediction(word_list, list_type, pred_embedding, word_dict):
+    # create a directory for each word, save predicted embeddings
+    for i in range(len(word_list)):
+        folder_path = word_list[i] + " (" + list_type + ")" 
+        pathlib.Path(folder_name).mkdir()
+        with open(folder_path + "/ex1.p", 'wb') as fp:
+          pickle.dump(pred_embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
+        
+        word_dict[word_list[i]] = pred_embedding[i]
+     return word_dict 
+
 def compute_pair_sim(word1, word2): 
     """
     compute cosine similarity between two words
@@ -247,25 +258,12 @@ def main():
         vis_embedding = model.predict(vis_set)
         zs_embedding = model.predict(zs_set)
 
-    # save vis embedding to word's directory 
+    # save embeddings to word's directory and accumulate all words into a word_dict dictionary
     words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
     word_dict = {}
+    word_dict = save_prediction(zs_list_all, "zs", zs_embedding, word_dict)
+    word_dict = save_prediction(vis_list_all, "vis", vis_embedding, word_dict)
     
-    img_dict = Magnitude("/path/to/image.magnitude")
-    # create a directory for each word, save predicted embeddings
-    for i in range(len(zs_words_all)):
-        folder_path = zs_words_all[i] + " (zs)"
-        pathlib.Path(folder_name).mkdir()
-        with open(zs_words_all[i] + " (zs)/" + "ex1.p", 'wb') as fp:
-          pickle.dump(zs_embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
-
-    for i in range(len(vis_words_all)):
-        folder_path = vis_words_all[i] + " (vis)"
-        pathlib.Path(folder_name).mkdir()
-        with open(vis_words_all[i] + " (vis)/" + "ex1.p", 'wb') as fp:
-            pickle.dump(vis_embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
-    
-    word_dict[words[i][0]] = vis_embedding[i]
     # evaluate against simlex
     simlex = get_simlex()
     model_sim = compute_sim(word_dict, simlex)
