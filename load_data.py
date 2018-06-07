@@ -4,7 +4,7 @@ import pandas as pd
 from argparse import ArgumentParser
 import os
 import pathlib
-from pymagnitude import *
+# from pymagnitude import *
 
 """
 Purpose:
@@ -42,29 +42,20 @@ def create_image_embedding():
     @return img_list: a numpy array of image embeddings 
     """
     # read the file that contains words and paths to image directories 
-    words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
-    for i in range(words.shape[0]):
-        directory = words[i][1]
-        for f in os.listdir(directory):
-            # open the pickle file that contains image embeddings
-            with open(f, 'rb') as fp:
-                img = pickle.load(fb)
-                try:
-                    img_embedding = np.stack((img_embedding, img), axis=-1)
-                except:
-                    img_embedding = img
+    words = pd.read_csv('/scratch/mnguyen7/multimodal/fr-short.txt', sep=' ', header=None).as_matrix()
+    for i in range(0, words.shape[0], 10):
+        img_embedding = words[i:i+10,1:]
+        # average pooling to create one single image embedding
+        average_embedding = img_embedding.sum(axis=1) / img_embedding.shape[1]
+        average_embedding = average_embedding.astype("<U100")
+        average_embedding = np.insert(average_embedding, 0, words[i][1])
+        if i == 0:
+            img_list = average_embedding
+        else:
+            img_list = np.vstack((img_list, average_embedding))
 
-            # average pooling to create one single image embedding
-            average_embedding = img_embedding.sum(axis=1) / img_embedding.shape[1]
-            average_embedding = average_embedding.astype("<U100")
-            average_embedding = np.insert(average_embedding, 0, words[i][1])
-            if i == 0:
-                img_list = average_embedding
-            else:
-                img_list = np.vstack((img_list, average_embedding))
-
-            # save all embeddings to txt, convert txt to magnitude in cmd line 
-            np.savetxt("img_embedding.txt", img_list, fmt="%s")
+        # save all embeddings to txt, convert txt to magnitude in cmd line 
+        np.savetxt("img_embedding.txt", img_list, fmt="%s")
 
 def create_train_set():
     """
@@ -127,4 +118,4 @@ def parse_args():
     return args
     # return train_set, args
 
-parse_args()
+create_image_embedding()
