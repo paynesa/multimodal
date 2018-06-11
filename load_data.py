@@ -4,58 +4,35 @@ import pandas as pd
 from argparse import ArgumentParser
 import os
 import pathlib
-# from pymagnitude import *
+from pymagnitude import *
+from gensim.scripts.glove2word2vec import glove2word2vec
+from gensim.models import KeyedVectors
 
 """
 Purpose:
   - Create the training set (x_train, y_train)
   - Create a directory for each word, saving word embedding and image embedding 
 """
-# don't even need this anymore hahaha
-def create_word_embedding():
-    """
-    Return a dictionary from Glove word vectors, keys: words, values: word vectors 
-    """
-    # load Glove word vectors 
-    GLOVE_300D = "/scratch/mnguyen7/re_experiments/glove.840B.300d.txt"
-    word_vectors_gl = {}
-
-    with open(GLOVE_300D, encoding='utf-8') as f:
-        for line in f:
-            word = line.rstrip().rsplit(' ')
-            word_vectors_gl[word[0]] = np.asarray(word[1:], dtype='float32')
-    
-    # save the dictionary to a file 
-    #with open('/scratch/mnguyen7/re_experiments/word_vectors_gl', 'wb') as fp:
-        #pickle.dump(word_vectors_gl, fp, protocol=pickle.HIGHEST_PROTOCOL)
-    # open the file 
-    with open('/scratch/mnguyen7/re_experiments/word_vectors_gl', 'rb') as fp:
-        word_vectors_gl = pickle.load(fp)
-    print("Shape of each word vector: {}".format(word_vectors_gl["something"].shape))
-    
-    return word_vectors_gl
-
-# TODO: test the training set. x: word vector, y: image vector  
 def create_image_embedding():
     """
     create one image embedding for each word by average pooling all image feature vectors
-    @return img_list: a numpy array of image embeddings 
+    @save img_list: a numpy array of image embeddings 
     """
     # read the file that contains words and paths to image directories 
-    words = pd.read_csv('/scratch/mnguyen7/multimodal/fr-short.txt', sep=' ', header=None).as_matrix()
+    words = pd.read_csv('/data1/minh/fr-short.txt', sep=' ', header=None).as_matrix()
     for i in range(0, words.shape[0], 10):
         img_embedding = words[i:i+10,1:]
         # average pooling to create one single image embedding
-        average_embedding = img_embedding.sum(axis=1) / img_embedding.shape[1]
+        average_embedding = img_embedding.sum(axis=0) / img_embedding.shape[0]
         average_embedding = average_embedding.astype("<U100")
-        average_embedding = np.insert(average_embedding, 0, words[i][1])
+        average_embedding = np.insert(average_embedding, 0, words[i][0])
         if i == 0:
             img_list = average_embedding
         else:
             img_list = np.vstack((img_list, average_embedding))
 
-        # save all embeddings to txt, convert txt to magnitude in cmd line 
-        np.savetxt("img_embedding.txt", img_list, fmt="%s")
+    # save all embeddings to txt, convert txt to magnitude in cmd line 
+    # np.savetxt("img_embedding.txt", img_list, fmt="%s")
 
 def create_train_set():
     """
@@ -65,41 +42,66 @@ def create_train_set():
     create the train set (x_train, y_train)
     @return x_train, y_train
     """
-    words = pd.read_csv('/nlp/data/bcal/features/word_absolute_paths.tsv', sep='\t')
-    word_dict = Magnitude('/path/to/glove.magnitude')
-    create_image_embedding()
-    img_dict = Magnitude('/path/to/image.magnitude')
+    words = pd.read_csv('/data1/minh/fr-short.txt', sep=' ', header=None).as_matrix()
+    # save all words in a txt file 
+    # np.savetxt('words.txt', words[:,0], fmt="%s")
+    word_dict = Magnitude('/data1/minh/word.magnitude')
+    img = Magnitude('image.magnitude')
+    print(word_dict.query('row-writings'))
+    
+    # create a file of processed words (no annotations of translation)
+    for i in range(0, words.shape[0], 10):
+        if "row" in words[i][0] or "column" in words[i][0]:
+            word = words[i][0].split('-')[1]
+        if "_" in words[i][0]:
+            word_list = word.split('_')
+            word = ""
+            for i in range(len(word_list)):
+                word += word_list[i]
+                if i < len(word_list)-1:
+                    word += " "
+        # uncomment if haven't created words_processed 
+        # with open('words_processed.txt', 'a') as f:
+            # f.write("{}\n".format(word))
+    # TODO: skip over words with all NaNs    
 
-    for i in range(words.shape[0]):
-        # create a directory for each word
-        # pathlib.Path(words[i][0]).mkdir()
+    # uncomment if haven't saved image embeddings to txt 
+    # create_image_embedding()
+    glove2word2vec('img_embedding.txt', 'image.txt')
+    img_dict = KeyedVectors.load_word2vec_format('image.txt', binary=False)
+
+    for i in range(0, words.shape[0], 10):
         # handle OOV words
-        word_embedding = word_dict.query(words[i][0])
-        img_embedding = img_dict.query(words[i][0])
-        
+        # convert word, e.g row-writings to writings 
+        if "row" in words[i][0] or "column" in words[i][0]:
+            phrase = words[i][0].split('-')[1]
+        if "_" in words[i][0]:
+            word_list = phrase.split('_')
+            word = ""
+            for i in range(len(word_list)):
+                word += word_list[i]
+                if i < len(word_list)-1:
+                    word += " "
+            phrase = word 
+        word_embedding = word_dict.query(phrase)
+        img_embedding = img_dict[words[i][0]]
+
         # check if a word has valid image vectors 
         # valid: image vectors doesn't contain all NaNs
-        check_nan = np.isnan(img_embedding)
-        all_nan = check_nan[check_nan==True].shape[0]
-        if all_nan == img_embedding.shape[0]:
-            # with Magnitude, saving img and word vectors is not necessary
-            # save word and image vectors to corresponding words' directories
-            # with open(words[i][0] + '/word.p', 'wb') as fp:
-                # pickle.dump(word_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
-            # with open(words[i][0] + '/image.p', 'wb') as fp:
-                # pickle.dump(img_embedding, fb, protocol=pickle.HIGHEST_PROTOCOL)
+        # check_nan = np.isnan(img_embedding)
+        # all_nan = check_nan[check_nan==True].shape[0]
+        # if all_nan == img_embedding.shape[0]:
             
-            # add to x_train and y_train
-            try:
-                x_train = np.vstack([x_train, word_embedding])
-                y_train = np.vstack([y_train, img_embedding])
-            except:
-                x_train = word_embedding
-                y_train = img_embedding 
-    
-    # TODO: format??
-    np.savetxt("x_train.txt", x_train)
-    np.savetxt("y_train.txt", y_train)
+        # add to x_train and y_train
+        try:
+            x_train = np.vstack([x_train, word_embedding])
+            y_train = np.vstack([y_train, img_embedding])
+        except:
+            x_train = word_embedding
+            y_train = img_embedding 
+    # uncomment if haven't created x_train, y_train
+    # np.savetxt("x_train.txt", x_train)
+    # np.savetxt("y_train.txt", y_train)
 
 def parse_args():
     """
@@ -114,8 +116,6 @@ def parse_args():
     parser.add_argument("-s", type=str, help="path for saving model")
     parser.add_argument("-l", type=str, help="path for loading model")
     args = parser.parse_args()
-    # train_set = create_train_set()
     return args
-    # return train_set, args
 
-create_image_embedding()
+create_train_set()
