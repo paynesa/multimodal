@@ -11,15 +11,26 @@ from gensim.models import KeyedVectors
 """
 Purpose:
   - Create the training set (x_train, y_train)
-  - Create a directory for each word, saving word embedding and image embedding 
 """
 def create_image_embedding():
     """
     create one image embedding for each word by average pooling all image feature vectors
-    @save img_list: a numpy array of image embeddings 
+    @save img_embedding: a numpy array of image embeddings 
     """
-    # read the file that contains words and paths to image directories 
-    words = pd.read_csv('/data1/minh/fr-short.txt', sep=' ', header=None).as_matrix()
+    # read the files that contain words and their image embeddings
+    # TODO: handle duplicates or not (maybe Magnitude will eventually handle this? 
+    folders = os.listdir('/data1/minh/data')
+    for f in folders:
+        word_dir = pd.read_csv('/data1/minh/data/'+f, sep=' ', header=None).as_matrix()
+        try:
+            words = np.vstack((words, word_dir))
+        except:
+            words = word_dir
+        print("done with {}".format(f)) 
+    # img embeddings before average pooling
+    np.savetxt('/data1/minh/data/unprocessed_img_embedding.txt', words, fmt='%s')
+    print("Done opening all files")
+    
     for i in range(0, words.shape[0], 10):
         img_embedding = words[i:i+10,1:]
         # average pooling to create one single image embedding
@@ -32,7 +43,8 @@ def create_image_embedding():
             img_list = np.vstack((img_list, average_embedding))
 
     # save all embeddings to txt, convert txt to magnitude in cmd line 
-    # np.savetxt("img_embedding.txt", img_list, fmt="%s")
+    np.savetxt("/data1/minh/data/img_embedding.txt", img_list, fmt="%s")
+    print("Done average pooling")
 
 def create_train_set():
     """
@@ -42,12 +54,11 @@ def create_train_set():
     create the train set (x_train, y_train)
     @return x_train, y_train
     """
-    words = pd.read_csv('/data1/minh/fr-short.txt', sep=' ', header=None).as_matrix()
+    words = pd.read_csv('/data1/minh/data/unprocessed_img_embedding.txt', sep=' ', header=None).as_matrix()
     # save all words in a txt file 
-    # np.savetxt('words.txt', words[:,0], fmt="%s")
-    word_dict = Magnitude('/data1/minh/word.magnitude')
-    img = Magnitude('image.magnitude')
-    print(word_dict.query('row-writings'))
+    np.savetxt('words.txt', words[:,0], fmt="%s")
+    word_dict = Magnitude('/data1/embeddings/pymagnitude/word.magnitude')
+    img_dict = Magnitude('image.magnitude')
     
     # create a file of processed words (no annotations of translation)
     for i in range(0, words.shape[0], 10):
@@ -67,9 +78,6 @@ def create_train_set():
 
     # uncomment if haven't saved image embeddings to txt 
     # create_image_embedding()
-    glove2word2vec('img_embedding.txt', 'image.txt')
-    img_dict = KeyedVectors.load_word2vec_format('image.txt', binary=False)
-
     for i in range(0, words.shape[0], 10):
         # handle OOV words
         # convert word, e.g row-writings to writings 
@@ -84,7 +92,7 @@ def create_train_set():
                     word += " "
             phrase = word 
         word_embedding = word_dict.query(phrase)
-        img_embedding = img_dict[words[i][0]]
+        img_embedding = img_dict.query(words[i][0])
 
         # check if a word has valid image vectors 
         # valid: image vectors doesn't contain all NaNs
@@ -118,4 +126,4 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-create_train_set()
+create_image_embedding()

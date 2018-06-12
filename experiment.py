@@ -13,8 +13,8 @@ import pandas as pd
 from scipy import stats
 import os
 from pymagnitude import *
-from gensim.scripts.glove2word2vec import glove2word2vec
-from gensim.models import KeyedVectors
+import pathlib
+import pickle 
 
 class MultimodalEmbedding:
     """
@@ -126,6 +126,7 @@ def get_wordsim_sim():
     Wordim353-sim 
     """
     wordsim = pd.read_csv('/data1/minh/evaluation/wordsim353_sim_rel/wordsim_similarity_goldstandard.txt', sep='\t', header=None)
+    print(wordsim.head())
     return wordsim.as_matrix()
 
 def get_wordsim_rel():
@@ -141,9 +142,9 @@ def get_semvis():
     """
     semsim = pd.read_csv('/data1/minh/evaluation/SemSim/SemSim.txt', sep='\t', header=0)
     semsim['WORD1'], semsim['WORD2'] = semsim['WORDPAIR'].str.split('#', 1).str
-    semsim = semsim[['WORD1', 'WORD2', 'SEMANTIC', 'VISUAL', 'WORDPAIR']]
-    
-    return semsim.as_matrix()
+    sem = semsim[['WORD1', 'WORD2', 'SEMANTIC']]
+    sim = semsim[['WORD1', 'WORD2', 'VISUAL']] 
+    return sem.as_matrix(), sim.as_matrix()
 
 def get_men():
     """
@@ -170,71 +171,46 @@ def split_eval(eval_set_list):
                     np.savetxt(f, eval_set[i].reshape(1, eval_set[i].shape[0]), fmt='%s')
         counter += 1
 
-def create_zs_set_individual(eval_set):
+def aggregate_set(eval_set_type):
     """
-    Zero-shot: dataset that contains word embeddings of words with no visual info
-    VIS: dataset that contains word embeddings of words with visual info
+    aggregate all zs words and their word embeddings into a file, for prediction 
+    similiar for vis words 
+    @returns vis_set: a numpy array of zs/vis words, associated with word embeddings
     """
-    img_dict = KeyedVectors.load_word2vec_format("image.txt", binary=False)
-    word_dict = Magnitude("/data1/minh/word.magnitude")
-    # list of all words in the eval_set 
-    zs_words = []
-    vis_words = []
-
-    for i in range(eval_set.shape[0]):
-        # check if image vectors exist for both words
-        word1 = word_dict[eval_set[i][0]]
-        word2 = word_dict.query(eval_set[i][1])
-        if img_dict.query(eval_set[i][0]) == False or img_dict.query(eval_set[i][1]) == False: 
-            # add word to zs_words 
-            zs_words.append(eval_set[i][0])
-            try: 
-                zs_set = np.vstack([zs_set, word1])
-                zs_set = np.vstack([zs_set, word2])
-            except:
-                zs_set = word1
-                zs_set = np.vstack([zs_set, word2])
-        else:  
-            # add word to vis_words 
-            vis_words.append(eval_set[i][0])
-            try: 
-                vis_set = np.vstack([vis_set, word1])
-                vis_set = np.vstack([vis_set, word2])
-            except:
-                vis_set = word1
-                vis_set = np.vstack([vis_set, word2])
-    return zs_set, vis_set, zs_words, vis_words
-
-def create_zs_set_all(eval_set_list):
-    """
-    Aggregate VIS and ZS words of all test sets into 2 big sets
-    """
-    zs_words_all = []
-    vis_words_all = []
-
-    for s in eval_set_list:
-        zs, vis, zs_words, vis_words = create_zs_set_individual(s)
-        # aggregate zs, vis words of all eval sets
-        zs_words_all += zs_words
-        vis_words_all += vis_words
-        try:
-            zs_set = np.vstack([zs_set, zs])
-            vis_set = np.vstack([vis_set, vis])
-        except:
-            zs_set = zs 
-            vis_set = vis
-    return zs_set, vis_set, zs_words_all, vis_words_all
-
-def save_prediction(word_list, list_type, pred_embedding, word_dict):
-    # create a directory for each word, save predicted embeddings
-    for i in range(len(word_list)):
-        folder_path = word_list[i] + " (" + list_type + ")" 
-        pathlib.Path(folder_name).mkdir()
-        with open(folder_path + "/ex1.p", 'wb') as fp:
-          pickle.dump(pred_embedding[i], fp, protocol=pickle.HIGHEST_PROTOCOL)
+    word_dict = Magnitude('/data1/embeddings/pymagnitude/word.magnitude')
+    check_duplicates_dict = {}
+    # open all _zs and _vis.txt files
+    for i in range(5):
+        if eval_set_type == 'vis':
+            eval_set = pd.read_csv(str(i)+'_vis.txt', sep=' ', header=None).as_matrix()
+        elif eval_set_type == 'zs':
+            eval_set = pd.read_csv(str(i) + '_zs.txt', sep= ' ', header=None).as_matrix()
         
-        word_dict[word_list[i]] = pred_embedding[i]
-    return word_dict 
+        for i in range(eval_set.shape[0]):
+            # if this word has never been added to the prediction set
+            if check_duplicates_dict.get(eval_set[i][0]) is None:
+                word1 = word_dict.query(eval_set[i][0]).astype('<U100')
+                word1 = np.insert(word1, 0, eval_set[i][0])
+                try:
+                    pred_set = np.vstack((pred_set, word1))
+                except:
+                    pred_set = word1    
+                check_duplicates_dict[eval_set[i][0]] = 1
+
+            if check_duplicates_dict.get(eval_set[i][1]) is None:
+                word2 = word_dict.query(eval_set[i][1]).astype('<U100')
+                word2 = np.insert(word2, 0, eval_set[i][1])
+                pred_set = np.vstack((pred_set, word2))         
+                check_duplicates_dict[eval_set[i][1]] = 1
+    
+        np.savetxt('pred_set_'+eval_set_type+'.txt', pred_set, fmt='%s')
+    
+def save_prediction(word_list, list_type, pred_embedding):
+    # create a directory for each word, save predicted embeddings
+    word_dict = dict(zip(word_list, pred_embedding))
+    
+    with open("ex1_"+list_type+".p", 'wb') as fp:
+        pickle.dump(word_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
 def compute_pair_sim(word1, word2): 
     """
@@ -245,29 +221,22 @@ def compute_pair_sim(word1, word2):
     length_word2 = np.linalg.norm(word2)
     return dot_product/(length_word1 * length_word2)
 
-def compute_sim(word_dict, eval_set):
+def compute_sim(eval_set, word_dict):
     """
     compute similarity for all words in the evaluation set
     @param word_dict: dictionary: keys: words, values: learned embeddings
-    @param eval_set: the evaluation set 
+    @param eval_set_type: type of evaluation set (zs/vis) 
     @return a numpy array of word similarity
-    """
-    zs_sim = []
-    vis_sim = []
-    img_dict = Magnitude("image.magnitude")
+    """ 
+    word_sim = []
     for i in range(eval_set.shape[0]):
         embedding1 = word_dict[eval_set[i][0]]
         embedding2 = word_dict[eval_set[i][1]]
         pair_sim = compute_pair_sim(embedding1, embedding2)
-        # if this word is ZS 
-        if img_dict.query(eval_set[i][0]) == False or img_dict.query(eval_set[i][1]) == False:
-            zs_sim.append(pair_sim)
-        else:
-            # TODO: split human ratings for zs and vis, then save them 
-            vis_sim.append(pair_sim)
-    zs_sim = np.asarray(zs_sim) 
-    vis_sim = np.asarray(vis_sim)
-    return zs_sim, vis_sim
+        word_sim.append(pair_sim)
+    word_sim = np.asarray(word_sim)
+    
+    return word_sim
 
 def evaluate_cor(model_sim, human_sim):
     """
@@ -278,6 +247,18 @@ def evaluate_cor(model_sim, human_sim):
     """
     cor, pval = stats.spearmanr(model_sim, human_sim)
     return cor, pval
+
+def evaluate(eval_set_type, word_dict):
+    """
+    Print out evaluation results (correlation, P-value) for all sets, either of type ZS or VIS 
+    @param eval_set_type: Type of eval set (ZS/VIS)
+    @param word_dict: corresponding dictionary: keys: zs/vis words, values: predicted embeddings 
+    """ 
+    for i in range(6):
+        eval_set = pd.read_csv(str(i)+'_'+eval_set_type+'.txt', sep=' ', header=None).as_matrix()
+        model_sim = compute_sim(eval_set, word_dict)
+        cor, pval = evaluate_cor(model_sim, eval_set[:,2])
+        print("Correlation for {} ({}): {}, P-value: {}".format(str(i), eval_set_type, cor, pval))
 
 def main():
     args = parse_args()
@@ -291,36 +272,38 @@ def main():
     wordsim_sim = get_wordsim_sim()
     wordsim_rel = get_wordsim_rel()
     simlex = get_simlex()
-    semvis = get_semvis()
+    sem_sim, vis_sim = get_semvis()
     men = get_men()
-    eval_set_list = [wordsim_sim, wordsim_rel, simlex, semvis, men]
+    eval_set_list = [wordsim_sim, wordsim_rel, simlex, men, sem_sim, vis_sim]
     # uncomment if haven't splitted the eval set
     # split_eval(eval_set_list)
-    # zs_set, vis_set, zs_words, vis_words = create_zs_set_all(eval_set_list)
+    
+    # uncomment if haven't created prediction set 
+    # aggregate_set('vis')
+    # aggregate_set('zs')
 
     # if args.s: train, save and load model in one go
     # if args.l: load an old model for prediction
     if args.s:
         model.start_training(args.model)
-    vis_embedding = model.predict(vis_set)
-    zs_embedding = model.predict(zs_set)
-
-    # save embeddings to word's directory and accumulate all words into a word_dict dictionary
-    word_dict = {}
-    word_dict = save_prediction(zs_words, "zs", zs_embedding, word_dict)
-    word_dict = save_prediction(vis_words, "vis", vis_embedding, word_dict)
     
-    # evaluate against simlex
-    simlex = get_simlex()
-    zs_sim, vis_sim = compute_sim(word_dict, simlex)
-    cor, pval = evaluate_cor(model_sim, simlex[:,3])
-    print("Correlation for SimLex (VIS): {}, P-value: {}".format(cor, pval))
+    # uncomment for prediction
+    # vis_pred_set = pd.read_csv('pred_set_vis.txt', sep=' ', header=None).as_matrix() 
+    zs_pred_set = pd.read_csv('pred_set_zs.txt', sep=' ', header=None).as_matrix()
+    # vis_embedding = model.predict(vis_pred_set[:, 1:])
+    zs_embedding = model.predict(zs_pred_set[:, 1:])
 
-    #evaluate against wordsim
-    wordsim = get_wordsim_all()
-    model_sim = compute_sim(word_dict, wordsim)
-    cor, pval = evaluate_cor(model_sim, wordsim[:,2])
-    print("Correlation for WordSim (VIS): {}, P-value: {}".format(cor, pval))
+    # uncomment if haven't accumulated all words into a word_dict dictionary
+    # save_prediction(zs_pred_set[:, 0], "zs", zs_embedding)
+    # save_prediction(vis_pred_set[:, 0], "vis", vis_embedding)    
+
+    # with open("ex1_vis.p", 'rb') as fp:
+        # word_dict_vis = pickle.load(fp)
+    with open("ex1_zs.p", 'rb') as fp:
+        word_dict_zs = pickle.load(fp)
+    
+    # evaluate('vis', word_dict_vis)
+    evaluate('zs', word_dict_zs)
 
 if __name__ == '__main__':
     main()
