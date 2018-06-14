@@ -157,17 +157,18 @@ def split_eval(eval_set_list):
     """
     Split each eval set into a VIS set and a ZS set
     """
-    vis_words = pd.read_csv('words_processed.txt', header=None).as_matrix()
+    path = '/data1/minh/evaluation/'
+    vis_words = pd.read_csv('/data1/minh/multimodal/words_processed.txt', header=None).as_matrix()
     counter = 0 # to mark eval set 
 
     for eval_set in eval_set_list:
         for i in range(eval_set.shape[0]):
             # check if both words in the word pair have image embeddings 
             if eval_set[i][0] in vis_words and eval_set[i][1] in vis_words:
-                with open(str(counter)+'_vis.txt', 'a') as f:
+                with open(path+str(counter)+'_vis.txt', 'a') as f:
                     np.savetxt(f, eval_set[i].reshape(1, eval_set[i].shape[0]), fmt='%s')
             else:
-                with open(str(counter)+'_zs.txt', 'a') as f:
+                with open(path+str(counter)+'_zs.txt', 'a') as f:
                     np.savetxt(f, eval_set[i].reshape(1, eval_set[i].shape[0]), fmt='%s')
         counter += 1
 
@@ -177,39 +178,37 @@ def aggregate_set(eval_set_type):
     similiar for vis words 
     @returns vis_set: a numpy array of zs/vis words, associated with word embeddings
     """
+    path = '/data1/minh/evaluation/'
     word_dict = Magnitude('/data1/embeddings/pymagnitude/word.magnitude')
     check_duplicates_dict = {}
     # open all _zs and _vis.txt files
     for i in range(5):
         if eval_set_type == 'vis':
-            eval_set = pd.read_csv(str(i)+'_vis.txt', sep=' ', header=None).as_matrix()
+            eval_set = pd.read_csv(path+str(i)+'_vis.txt', sep=' ', header=None).as_matrix()
         elif eval_set_type == 'zs':
-            eval_set = pd.read_csv(str(i) + '_zs.txt', sep= ' ', header=None).as_matrix()
+            eval_set = pd.read_csv(path+str(i) + '_zs.txt', sep= ' ', header=None).as_matrix()
         
         for i in range(eval_set.shape[0]):
             # if this word has never been added to the prediction set
             if check_duplicates_dict.get(eval_set[i][0]) is None:
                 word1 = word_dict.query(eval_set[i][0]).astype('<U100')
                 word1 = np.insert(word1, 0, eval_set[i][0])
-                try:
-                    pred_set = np.vstack((pred_set, word1))
-                except:
-                    pred_set = word1    
+                with open('/data1/minh/multimodal/pred_set_'+eval_set_type+'.txt', 'a') as f:
+                    np.savetxt(f, word1.reshape(1, word1.shape[0]), fmt='%s')
                 check_duplicates_dict[eval_set[i][0]] = 1
 
             if check_duplicates_dict.get(eval_set[i][1]) is None:
                 word2 = word_dict.query(eval_set[i][1]).astype('<U100')
                 word2 = np.insert(word2, 0, eval_set[i][1])
-                pred_set = np.vstack((pred_set, word2))         
+                with open('/data1/minh/multimodal/pred_set_'+eval_set_type+'.txt', 'a') as f:
+                    np.savetxt(f, word2.reshape(1, word2.shape[0]), fmt='%s')
                 check_duplicates_dict[eval_set[i][1]] = 1
     
-        np.savetxt('pred_set_'+eval_set_type+'.txt', pred_set, fmt='%s')
-    
 def save_prediction(word_list, list_type, pred_embedding):
-    # create a directory for each word, save predicted embeddings
+    # save dictionary of predicted embeddings
     word_dict = dict(zip(word_list, pred_embedding))
     
-    with open("ex1_"+list_type+".p", 'wb') as fp:
+    with open("/data1/minh/multimodal/"+"ex1_"+list_type+".p", 'wb') as fp:
         pickle.dump(word_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
 def compute_pair_sim(word1, word2): 
@@ -254,8 +253,9 @@ def evaluate(eval_set_type, word_dict):
     @param eval_set_type: Type of eval set (ZS/VIS)
     @param word_dict: corresponding dictionary: keys: zs/vis words, values: predicted embeddings 
     """ 
+    path = '/data1/minh/evaluation'
     for i in range(6):
-        eval_set = pd.read_csv(str(i)+'_'+eval_set_type+'.txt', sep=' ', header=None).as_matrix()
+        eval_set = pd.read_csv(path+str(i)+'_'+eval_set_type+'.txt', sep=' ', header=None).as_matrix()
         model_sim = compute_sim(eval_set, word_dict)
         cor, pval = evaluate_cor(model_sim, eval_set[:,2])
         print("Correlation for {} ({}): {}, P-value: {}".format(str(i), eval_set_type, cor, pval))
@@ -264,8 +264,9 @@ def main():
     args = parse_args()
     if args.s == None and args.l == None:
         raise Exception("Either save or load a model")
-    x_train = pd.read_csv("x_train.txt", sep=" ", header=None)
-    y_train = pd.read_csv("y_train.txt", sep=" ", header=None)
+    x_train = pd.read_csv("/data1/minh/multimodal/x_train.txt", sep=" ", header=None)
+    y_train = pd.read_csv("/data1/minh/multimodal/y_train.txt", sep=" ", header=None)
+    print("Done loading x_train and y_train")
     model = MultimodalEmbedding(x_train, y_train, args)
     
     # load evaluation sets
@@ -277,10 +278,14 @@ def main():
     eval_set_list = [wordsim_sim, wordsim_rel, simlex, men, sem_sim, vis_sim]
     # uncomment if haven't splitted the eval set
     # split_eval(eval_set_list)
+    # print("Done splitting eval sets into zs and vis.")
+    # print("Each eval set should have a separate zs and vis in evaluation folder.")
     
     # uncomment if haven't created prediction set 
-    # aggregate_set('vis')
-    # aggregate_set('zs')
+    aggregate_set('vis')
+    aggregate_set('zs')
+    print("Done aggregate zs and vis sets")
+    print("All ZS/VIS words are collected in pred_set in multimodal folder.")
 
     # if args.s: train, save and load model in one go
     # if args.l: load an old model for prediction
@@ -288,21 +293,23 @@ def main():
         model.start_training(args.model)
     
     # uncomment for prediction
-    # vis_pred_set = pd.read_csv('pred_set_vis.txt', sep=' ', header=None).as_matrix() 
-    zs_pred_set = pd.read_csv('pred_set_zs.txt', sep=' ', header=None).as_matrix()
-    # vis_embedding = model.predict(vis_pred_set[:, 1:])
+    path = '/data1/minh/multimodal/'
+    vis_pred_set = pd.read_csv(path+'pred_set_vis.txt', sep=' ', header=None).as_matrix() 
+    zs_pred_set = pd.read_csv(path+'pred_set_zs.txt', sep=' ', header=None).as_matrix()
+    vis_embedding = model.predict(vis_pred_set[:, 1:])
     zs_embedding = model.predict(zs_pred_set[:, 1:])
 
     # uncomment if haven't accumulated all words into a word_dict dictionary
-    # save_prediction(zs_pred_set[:, 0], "zs", zs_embedding)
-    # save_prediction(vis_pred_set[:, 0], "vis", vis_embedding)    
+    save_prediction(zs_pred_set[:, 0], "zs", zs_embedding)
+    save_prediction(vis_pred_set[:, 0], "vis", vis_embedding)
+    print("All predicted embeddings are saved in word_dict in multimodal folder.")    
 
-    # with open("ex1_vis.p", 'rb') as fp:
-        # word_dict_vis = pickle.load(fp)
-    with open("ex1_zs.p", 'rb') as fp:
+    with open(path+"ex1_vis.p", 'rb') as fp:
+        word_dict_vis = pickle.load(fp)
+    with open(path+"ex1_zs.p", 'rb') as fp:
         word_dict_zs = pickle.load(fp)
     
-    # evaluate('vis', word_dict_vis)
+    evaluate('vis', word_dict_vis)
     evaluate('zs', word_dict_zs)
 
 if __name__ == '__main__':
