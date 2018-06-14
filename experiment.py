@@ -41,7 +41,7 @@ class MultimodalEmbedding:
         self.model.add(Dense(4096))
         self.model.summary()
 
-        sgd = optimizers.SGD(lr=self.args.lr)
+        sgd = SGD(lr=self.args.lr)
         self.model.compile(optimizer=sgd, loss="mean_squared_error", metrics=["accuracy"])
     
     def start_training(self, model):
@@ -54,28 +54,23 @@ class MultimodalEmbedding:
             printf("model: linear/neural")
         
         print("Training initialized...")
-        print(self.args.e)
         history = self.model.fit(self.x_train, self.y_train, epochs=self.args.e, verbose=1)
         print("Training complete")
 
         try:
-            self.model.save(self.args.s)
+            self.model.save(self.args.s+'.h5')
             print("Model saved")
         except:
             raise Exception("Error saving model")
-
+    
+    def load_model(self):
+        self.model = load_model(self.args.l+'.h5')
+ 
     def predict(self, x):
         """
         @param x: a set of word embeddings
         """
         try:
-            # self.args.s: train, save, then load the model in one go 
-            # self.args.l: load an old model for prediction
-            if self.args.s:
-                self.model = load_model(self.args.s)
-            elif self.args.l:
-                self.model = load_model(self.args.l)
-            
             learned_embedding = self.model.predict(x)
             return learned_embedding
         except:
@@ -207,8 +202,12 @@ def aggregate_set(eval_set_type):
 def save_prediction(word_list, list_type, pred_embedding):
     # save dictionary of predicted embeddings
     word_dict = dict(zip(word_list, pred_embedding))
-    
-    with open("/data1/minh/multimodal/"+"ex1_"+list_type+".p", 'wb') as fp:
+    if self.args.s:
+        path = self.args.s 
+    else:
+        path = self.args.l
+
+    with open(path+"_"+list_type+".p", 'wb') as fp:
         pickle.dump(word_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
 def compute_pair_sim(word1, word2): 
@@ -237,27 +236,17 @@ def compute_sim(eval_set, word_dict):
     
     return word_sim
 
-def evaluate_cor(model_sim, human_sim):
-    """
-    Compute Spearman rank correlation between two sets of similarity ratings
-    @param model_sim: similarity ratings computed by model
-    @param human_sim: similarity ratings rated by humans
-    @return rank correlation and its P-value
-    """
-    cor, pval = stats.spearmanr(model_sim, human_sim)
-    return cor, pval
-
 def evaluate(eval_set_type, word_dict):
     """
     Print out evaluation results (correlation, P-value) for all sets, either of type ZS or VIS 
     @param eval_set_type: Type of eval set (ZS/VIS)
     @param word_dict: corresponding dictionary: keys: zs/vis words, values: predicted embeddings 
     """ 
-    path = '/data1/minh/evaluation'
+    path = '/data1/minh/evaluation/'
     for i in range(6):
         eval_set = pd.read_csv(path+str(i)+'_'+eval_set_type+'.txt', sep=' ', header=None).as_matrix()
         model_sim = compute_sim(eval_set, word_dict)
-        cor, pval = evaluate_cor(model_sim, eval_set[:,2])
+        cor, pval = stats.spearmanr(model_sim, eval_set[:,2])
         print("Correlation for {} ({}): {}, P-value: {}".format(str(i), eval_set_type, cor, pval))
 
 def main():
@@ -282,31 +271,35 @@ def main():
     # print("Each eval set should have a separate zs and vis in evaluation folder.")
     
     # uncomment if haven't created prediction set 
-    aggregate_set('vis')
-    aggregate_set('zs')
-    print("Done aggregate zs and vis sets")
-    print("All ZS/VIS words are collected in pred_set in multimodal folder.")
+    # aggregate_set('vis')
+    # aggregate_set('zs')
+    # print("Done aggregate zs and vis sets")
+    # print("All ZS/VIS words are collected in pred_set in multimodal folder.")
 
     # if args.s: train, save and load model in one go
     # if args.l: load an old model for prediction
     if args.s:
+        model_path = args.s
         model.start_training(args.model)
+    if args.l:
+        model_path = args.l
+        model.load_model()
     
     # uncomment for prediction
     path = '/data1/minh/multimodal/'
-    vis_pred_set = pd.read_csv(path+'pred_set_vis.txt', sep=' ', header=None).as_matrix() 
-    zs_pred_set = pd.read_csv(path+'pred_set_zs.txt', sep=' ', header=None).as_matrix()
-    vis_embedding = model.predict(vis_pred_set[:, 1:])
-    zs_embedding = model.predict(zs_pred_set[:, 1:])
+    # vis_pred_set = pd.read_csv(path+'pred_set_vis.txt', sep=' ', header=None).as_matrix() 
+    # zs_pred_set = pd.read_csv(path+'pred_set_zs.txt', sep=' ', header=None).as_matrix()
+    # vis_embedding = model.predict(vis_pred_set[:, 1:])
+    # zs_embedding = model.predict(zs_pred_set[:, 1:])
 
     # uncomment if haven't accumulated all words into a word_dict dictionary
-    save_prediction(zs_pred_set[:, 0], "zs", zs_embedding)
-    save_prediction(vis_pred_set[:, 0], "vis", vis_embedding)
-    print("All predicted embeddings are saved in word_dict in multimodal folder.")    
-
-    with open(path+"ex1_vis.p", 'rb') as fp:
+    # save_prediction(zs_pred_set[:, 0], "zs", zs_embedding)
+    # save_prediction(vis_pred_set[:, 0], "vis", vis_embedding)
+    # print("All predicted embeddings are saved in word_dict in multimodal folder.")    
+    
+    with open(model_path+"_vis.p", 'rb') as fp:
         word_dict_vis = pickle.load(fp)
-    with open(path+"ex1_zs.p", 'rb') as fp:
+    with open(model_path+"_zs.p", 'rb') as fp:
         word_dict_zs = pickle.load(fp)
     
     evaluate('vis', word_dict_vis)
