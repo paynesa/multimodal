@@ -199,13 +199,13 @@ def aggregate_set(eval_set_type):
                     np.savetxt(f, word2.reshape(1, word2.shape[0]), fmt='%s')
                 check_duplicates_dict[eval_set[i][1]] = 1
     
-def save_prediction(word_list, list_type, pred_embedding):
+def save_prediction(word_list, list_type, pred_embedding, args):
     # save dictionary of predicted embeddings
     word_dict = dict(zip(word_list, pred_embedding))
-    if self.args.s:
-        path = self.args.s 
+    if args.s:
+        path = args.s 
     else:
-        path = self.args.l
+        path = args.l
 
     with open(path+"_"+list_type+".p", 'wb') as fp:
         pickle.dump(word_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
@@ -287,15 +287,15 @@ def main():
     
     # uncomment for prediction
     path = '/data1/minh/multimodal/'
-    # vis_pred_set = pd.read_csv(path+'pred_set_vis.txt', sep=' ', header=None).as_matrix() 
-    # zs_pred_set = pd.read_csv(path+'pred_set_zs.txt', sep=' ', header=None).as_matrix()
-    # vis_embedding = model.predict(vis_pred_set[:, 1:])
-    # zs_embedding = model.predict(zs_pred_set[:, 1:])
+    vis_pred_set = pd.read_csv(path+'pred_set_vis.txt', sep=' ', header=None).as_matrix() 
+    zs_pred_set = pd.read_csv(path+'pred_set_zs.txt', sep=' ', header=None).as_matrix()
+    vis_embedding = model.predict(vis_pred_set[:, 1:])
+    zs_embedding = model.predict(zs_pred_set[:, 1:])
 
     # uncomment if haven't accumulated all words into a word_dict dictionary
-    # save_prediction(zs_pred_set[:, 0], "zs", zs_embedding)
-    # save_prediction(vis_pred_set[:, 0], "vis", vis_embedding)
-    # print("All predicted embeddings are saved in word_dict in multimodal folder.")    
+    save_prediction(zs_pred_set[:, 0], "zs", zs_embedding, args)
+    save_prediction(vis_pred_set[:, 0], "vis", vis_embedding, args)
+    print("All predicted embeddings are saved in word_dict in multimodal folder.")    
     
     with open(model_path+"_vis.p", 'rb') as fp:
         word_dict_vis = pickle.load(fp)

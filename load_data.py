@@ -24,21 +24,24 @@ def create_image_embedding():
         print("Folder name: {}".format(f))
         words = pd.read_csv('/data1/minh/data/'+f, sep=' ', header=None).as_matrix()
         print("Done loading from pandas")
-
-        for i in range(0, words.shape[0], 10):
+        
+        start = 0
+        for i in range(words.shape[0]-1):
             # only process English words, which start with 'row'
-            if 'column-' in words[i][0]:
+            if words[i][0] != words[i+1][0]:
+                end = i+1
+                img_embedding = words[start:end,1:]
+                # average pooling to create one single image embedding
+                average_embedding = img_embedding.sum(axis=0) / img_embedding.shape[0]
+                average_embedding = np.insert(average_embedding, 0, words[i][0])
+                # save all embeddings to txt, convert txt to magnitude in cmd line 
+                with open('/data1/minh/multimodal/img_embedding.txt', 'a') as f:
+                    np.savetxt(f, average_embedding.reshape(1, average_embedding.shape[0]), fmt="%s")
+                start = i+1
+            
+            if 'column-' in words[i+1][0]:
                 print("Number of English words: {}".format(i/10))
                 break
-            img_embedding = words[i:i+10,1:]
-            # average pooling to create one single image embedding
-            average_embedding = img_embedding.sum(axis=0) / img_embedding.shape[0]
-            # average_embedding = average_embedding.astype("<U100")
-            average_embedding = np.insert(average_embedding, 0, words[i][0])
-            # save all embeddings to txt, convert txt to magnitude in cmd line 
-            with open('/data1/minh/img_embedding.txt', 'a') as f:
-                np.savetxt(f, average_embedding.reshape(1, average_embedding.shape[0]), fmt="%s")
-        
     print("Done average pooling")
 
 def create_train_set():
@@ -49,7 +52,7 @@ def create_train_set():
     create the train set (x_train, y_train)
     @return x_train, y_train
     """
-    words = pd.read_csv('/data1/minh/img_embedding.txt', sep=' ', header=None).as_matrix()
+    words = pd.read_csv('/data1/minh/multimodal/img_embedding.txt', sep=' ', header=None).as_matrix()
     # save all words in a txt file 
     np.savetxt('/data1/minh/multimodal/words.txt', words[:,0], fmt="%s")
     word_dict = Magnitude('/data1/embeddings/pymagnitude/word.magnitude')
@@ -60,6 +63,7 @@ def create_train_set():
     # create a file of processed words (no annotations of translation)
     # query for processed words' embeddings
     for i in range(words.shape[0]):
+        unprocessed_word = words[i][0]
         # handle OOV words
         # convert word, e.g row-writings to writings 
         if "row" in words[i][0]:
@@ -73,11 +77,10 @@ def create_train_set():
                     word += " "
             phrase = word 
         
-        with open('/data1/minh/multimodal/words_processed.txt', 'a') as f:
-            f.write("{}\n".format(phrase))
-        
+        # with open('/data1/minh/multimodal/words_processed.txt', 'a') as f:
+            # f.write("{}\n".format(phrase))
         word_embedding = word_dict.query(phrase)
-        img_embedding = img_dict.query(words[i][0])
+        img_embedding = img_dict.query(unprocessed_word)
 
         # check if a word has valid image vectors 
         # valid: image vectors doesn't contain all NaNs
@@ -86,8 +89,8 @@ def create_train_set():
         # if all_nan == img_embedding.shape[0]:
             
         # add to x_train and y_train
-        with open('/data1/minh/multimodal/x_train.txt', 'a') as f:
-            np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
+        # with open('/data1/minh/multimodal/x_train.txt', 'a') as f:
+            # np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
         with open('/data1/minh/multimodal/y_train.txt', 'a') as f:
             np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
 
@@ -105,3 +108,4 @@ def parse_args():
     parser.add_argument("-l", type=str, help="path for loading model")
     args = parser.parse_args()
     return args
+
