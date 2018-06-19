@@ -1,17 +1,15 @@
+"""
+Purpose:
+ - Collect image embeddings in one txt file, convert to Magnitude in command line 
+ - Create the training set (x_train, y_train)
+"""
+
 import numpy as np
 import pickle
 import pandas as pd 
-from argparse import ArgumentParser
 import os
-import pathlib
 from pymagnitude import *
-from gensim.scripts.glove2word2vec import glove2word2vec
-from gensim.models import KeyedVectors
 
-"""
-Purpose:
-  - Create the training set (x_train, y_train)
-"""
 def create_image_embedding():
     """
     create one image embedding for each word by average pooling all image feature vectors
@@ -92,19 +90,4 @@ def create_train_set():
             np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
         with open('/data1/minh/multimodal/y_train.txt', 'a') as f:
             np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
-
-def parse_args():
-    """
-    parse parameters set by user
-    @return x_train, y_train, args (the parameters)
-    """
-    parser = ArgumentParser()
-    parser.add_argument("model", default="neural", type=str, help="[linear, neural]")
-    parser.add_argument("-lr", default=0.1, type=int, help="learning rate, default=0.1 for both models")
-    parser.add_argument("-u", default=300, type=int, help="num of hidden units for neural net")
-    parser.add_argument("-e", default=25, type=int, help="num of epochs for training, default=25 for neural net, 175 for linear")
-    parser.add_argument("-s", type=str, help="path for saving model")
-    parser.add_argument("-l", type=str, help="path for loading model")
-    args = parser.parse_args()
-    return args
 

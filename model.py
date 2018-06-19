@@ -4,13 +4,13 @@ Purpose:
 - Predict embeddings
 - Save embeddings to dictionaries 
 """
-from load_data import parse_args
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
 from keras.optimizers import SGD
 from keras.models import load_model
 
+from argparse import ArgumentParser
 import pandas as pd
 import pickle
 
@@ -92,6 +92,21 @@ def merge_dict(dict1, dict2, path):
     dict_all = {**dict1, **dict2}
     with open(path+'_all.p', 'wb') as fp:
         pickle.dump(dict_all, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+def parse_args():
+    """
+    parse parameters set by user
+    @return x_train, y_train, args (the parameters)
+    """
+    parser = ArgumentParser()
+    parser.add_argument("model", default="neural", type=str, help="[linear, neural]")
+    parser.add_argument("-lr", default=0.1, type=int, help="learning rate, default=0.1 for both models")
+    parser.add_argument("-u", default=300, type=int, help="num of hidden units for neural net")
+    parser.add_argument("-e", default=25, type=int, help="num of epochs for training, default=25 for neural net, 175 for linear")
+    parser.add_argument("-s", type=str, help="path for saving model")
+    parser.add_argument("-l", type=str, help="path for loading model")
+    args = parser.parse_args()
+    return args
 
 def main():
     args = parse_args()
