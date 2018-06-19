@@ -64,7 +64,6 @@ def create_train_set():
     # query for processed words' embeddings
     for i in range(words.shape[0]):
         unprocessed_word = words[i][0]
-        # handle OOV words
         # convert word, e.g row-writings to writings 
         if "row" in words[i][0]:
             phrase = words[i][0].split('-')[1]
@@ -77,8 +76,8 @@ def create_train_set():
                     word += " "
             phrase = word 
         
-        # with open('/data1/minh/multimodal/words_processed.txt', 'a') as f:
-            # f.write("{}\n".format(phrase))
+        with open('/data1/minh/multimodal/words_processed.txt', 'a') as f:
+            f.write("{}\n".format(phrase))
         word_embedding = word_dict.query(phrase)
         img_embedding = img_dict.query(unprocessed_word)
 
@@ -89,8 +88,8 @@ def create_train_set():
         # if all_nan == img_embedding.shape[0]:
             
         # add to x_train and y_train
-        # with open('/data1/minh/multimodal/x_train.txt', 'a') as f:
-            # np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
+        with open('/data1/minh/multimodal/x_train.txt', 'a') as f:
+            np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
         with open('/data1/minh/multimodal/y_train.txt', 'a') as f:
             np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
 
