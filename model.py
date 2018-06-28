@@ -128,8 +128,8 @@ def main():
         model.load_model() 
     
     path = '/data1/minh/multimodal/' 
-    vis_pred_set = pd.read_csv(path+'pred_set_vis.txt', sep=' ', header=None).as_matrix()
-    zs_pred_set = pd.read_csv(path+'pred_set_zs.txt', sep=' ', header=None).as_matrix()
+    vis_pred_set = pd.read_csv(path+'pred_set_vis.txt', sep=' ', header=None).values
+    zs_pred_set = pd.read_csv(path+'pred_set_zs.txt', sep=' ', header=None).values
     vis_embedding = model.predict(vis_pred_set[:, 1:])
     zs_embedding = model.predict(zs_pred_set[:, 1:])
      
