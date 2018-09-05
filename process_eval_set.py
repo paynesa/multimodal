@@ -1,7 +1,7 @@
 """
 Purpose:
 - Accumulate 6 eval sets 
-- Split each eval set into VIS and ZS subsets 
+- Split each eval set into VIS (subset of words with image vecs) and ZS (subset of zero-shot words)
 - Aggregate all VIS/ZS words across sets to avoid prediction for duplicated words
 """
 
@@ -30,44 +30,6 @@ def get_eval_set_list():
     
     eval_set_list = [wordsim_sim, wordsim_rel, simlex, men, sem, sim]
     return eval_set_list
-
-def process_word(word):
-    """
-    turn plurals into singulars and remove anxiliary info
-    """
-    if '_' in word:
-        word = word.split('_')[0]
-    if word[len(word)-1] == 's':
-        word = word[:len(word)-1]
-    
-    return word
-
-def remove_missing_concrete(eval_set_list, ratings_dict): 
-    counter = 0 # to mark eval set
-    for eval_set in eval_set_list:
-        for i in range(eval_set.shape[0]):
-            word1 = process_word(eval_set[i][0])
-            word2 = process_word(eval_set[i][1])
-            if word1 in ratings_dict and word2 in ratings_dict:
-                with open('/data1/minh/evaluation/concrete/'+str(counter)+'_missing_concrete.txt', 'a') as f:
-                    np.savetxt(f, eval_set[i].reshape(1, eval_set[i].shape[0]), fmt='%s')
-        counter += 1
-
-def get_eval_set_missing(eval_set_list):
-    """
-    Get eval set that removes all words missing concreteness ratings
-    """
-    with open('/data1/minh/multimodal/ratings_dict.p', 'rb') as fp:
-        ratings_dict = pickle.load(fp)
-    # uncomment if haven't built eval_set 
-    #remove_missing_concrete(eval_set_list, ratings_dict)
-    
-    final_list = []
-    for i in range(6):
-        processed_set = pd.read_csv('/data1/minh/evaluation/concrete/'+str(i)+'_missing_concrete.txt', sep=' ', header=None).values
-        final_list.append(processed_set)
-    
-    return final_list
 
 def split_eval(eval_set_list):
     """
@@ -119,6 +81,48 @@ def aggregate_set(eval_set_type):
                 with open('/data1/minh/multimodal/pred_set_'+eval_set_type+'.txt', 'a') as f:
                     np.savetxt(f, word2.reshape(1, word2.shape[0]), fmt='%s')
                 check_duplicates_dict[eval_set[i][1]] = 1
+
+"""
+All functions below process data for word similarity classifier experiment, which doesn't improve similarity scores.
+Don't care about it atm.
+"""
+def process_word(word):
+    """
+    turn plurals into singulars and remove anxiliary info
+    """
+    if '_' in word:
+        word = word.split('_')[0]
+    if word[len(word)-1] == 's':
+        word = word[:len(word)-1]
+    
+    return word
+
+def remove_missing_concrete(eval_set_list, ratings_dict): 
+    counter = 0 # to mark eval set
+    for eval_set in eval_set_list:
+        for i in range(eval_set.shape[0]):
+            word1 = process_word(eval_set[i][0])
+            word2 = process_word(eval_set[i][1])
+            if word1 in ratings_dict and word2 in ratings_dict:
+                with open('/data1/minh/evaluation/concrete/'+str(counter)+'_missing_concrete.txt', 'a') as f:
+                    np.savetxt(f, eval_set[i].reshape(1, eval_set[i].shape[0]), fmt='%s')
+        counter += 1
+
+def get_eval_set_missing(eval_set_list):
+    """
+    Get eval set that removes all words missing concreteness ratings
+    """
+    with open('/data1/minh/multimodal/ratings_dict.p', 'rb') as fp:
+        ratings_dict = pickle.load(fp)
+    # uncomment if haven't built eval_set 
+    #remove_missing_concrete(eval_set_list, ratings_dict)
+    
+    final_list = []
+    for i in range(6):
+        processed_set = pd.read_csv('/data1/minh/evaluation/concrete/'+str(i)+'_missing_concrete.txt', sep=' ', header=None).values
+        final_list.append(processed_set)
+    
+    return final_list
 
 def main():
     # load evaluation sets

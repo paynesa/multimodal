@@ -10,7 +10,7 @@ import pandas as pd
 import os
 from pymagnitude import *
 
-def create_image_embedding(hold_out=False):
+def create_image_embedding():
     """
     create one image embedding for each word by average pooling all image feature vectors
     @save img_embedding: a numpy array of image embeddings 
@@ -28,17 +28,8 @@ def create_image_embedding(hold_out=False):
             # only process English words, which start with 'row'
             if words[i][0] != words[i+1][0]:
                 end = i+1
-                if hold_out == True:
-                    data_path = '/data1/minh/multimodal/test_img_embedding.txt'
-                    # hold out the last image vector of each word
-                    img_embedding = words[start:end-1,1:]
-                    # add that vector to a test set 
-                    test_vec = words[i]
-                    with open('/data1/minh/multimodal/heldout_img_set.txt', 'a') as f:
-                        np.savetxt(f, test_vec.reshape(1, test_vec.shape[0]), fmt='%s')
-                else:
-                    data_path = '/data1/minh/multimodal/img_embedding.txt'
-                    img_embedding = words[start:end,1:]
+                data_path = '/data1/minh/multimodal/img_embedding.txt'
+                img_embedding = words[start:end,1:]
                 # average pooling to create one single image embedding
                 average_embedding = img_embedding.sum(axis=0) / img_embedding.shape[0]
                 average_embedding = np.insert(average_embedding, 0, words[i][0])
@@ -54,9 +45,6 @@ def create_image_embedding(hold_out=False):
 
 def create_train_set():
     """
-    for each word, if its image vector does not consists only of NaN values, 
-    the word and image vectors are saved to the word's directory
-
     create the train set (x_train, y_train)
     @return x_train, y_train
     """
@@ -101,4 +89,4 @@ def create_train_set():
         with open('/data1/minh/multimodal/y_train.txt', 'a') as f:
             np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
 
-create_image_embedding(hold_out=True)
+create_image_embedding()
