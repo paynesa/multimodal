@@ -2,8 +2,6 @@
 Purpose:
 - Evaluate multimodal embeddings against 6 word similarity tests
 """
-
-from load_data import parse_args
 from process_eval_set import get_eval_set_list
 from argparse import ArgumentParser
 
