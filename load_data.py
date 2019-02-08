@@ -11,7 +11,9 @@ import os
 from pymagnitude import *
 
 def create_image_embedding():
-    """
+   #we need to try without average-pooling 
+  
+  """
     create one image embedding for each word by average pooling all image feature vectors
     @save img_embedding: a numpy array of image embeddings 
     """
