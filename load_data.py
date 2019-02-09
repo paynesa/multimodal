@@ -18,7 +18,7 @@ import numpy as np
 import pickle
 import pandas as pd 
 import os
-from pymagnitude import *
+#from pymagnitude import *
 
 
 #create one image embedding for each word by average pooling all image feature vectors
@@ -39,7 +39,7 @@ def create_image_embedding_avg():
             # only process English words, which start with 'row'
             if words[i][0] != words[i+1][0]:
                 end = i+1
-                data_path = '/data1/minh/multimodal/img_embedding.txt'
+                data_path = '/home/paynesa/testold'
                 img_embedding = words[start:end,1:]
 
                 # average pooling to create one single image embedding
@@ -65,8 +65,8 @@ def create_image_embedding():
     """
     # read the files that contain words and their image embeddings
     # TODO: handle duplicates or not (maybe Magnitude will eventually handle this? 
-    folders = os.listdir('/data1/minh/data')
-    for f in folders:
+folders = os.listdir('/data1/minh/data')
+for f in folders:
         print("Folder name: {}".format(f))
         words = pd.read_csv('/data1/minh/data/'+f, sep=' ', header=None).values
         print("Done loading from pandas")
@@ -76,17 +76,17 @@ def create_image_embedding():
             # only process English words, which start with 'row'
             if words[i][0] != words[i+1][0]:
                 end = i+1
-                data_path = '/data1/minh/multimodal/img_embedding_noav.txt'
+                data_path = '/home/paynesa/t'
                 img_embedding = words[start:end,1:]
                 # save all embeddings to txt, convert txt to magnitude in cmd line 
                 with open(data_path, 'a') as f:
-                    np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]), fmt="%s")
+                    np.savetxt(f, img_embedding, fmt="%s")
                 start = i+1
             
             if 'column-' in words[i+1][0]:
                 print("Number of English words: {}".format(i/10))
                 break
-    print("Done")
+print("Done")
 
 
 
@@ -145,4 +145,4 @@ def create_train_set():
         with open('/data1/minh/multimodal/y_train.txt', 'a') as f:
             np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
 
-create_image_embedding()
+create_image_embedding_avg()
