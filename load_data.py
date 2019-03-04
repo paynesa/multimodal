@@ -78,6 +78,11 @@ for f in folders:
                 end = i+1
                 data_path = '/home/paynesa/t'
                 img_embedding = words[start:end,1:]
+                     for j in range(img_embedding.shape[1]):
+                                w = words[i][0]
+                                w += "-" + str(j)
+                                print(w)
+                                word_emb = np.insert(img_embedding[j], 0, w)
                 # save all embeddings to txt, convert txt to magnitude in cmd line 
                 with open(data_path, 'a') as f:
                     np.savetxt(f, img_embedding, fmt="%s")
