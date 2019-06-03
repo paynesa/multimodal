@@ -85,6 +85,7 @@ def non_avg_embeddings():
 					if False in np.isnan(words[j, 1:]):
 						new = str(b) + "-" + str(j)
 						words[start+j][0] = new
+						#TODO check this -- weird behaviour
 						with open(datapath+'/imageembeddings.txt', 'a') as f:
 							np.savetxt(f, words[start+j, :], fmt="%s")
 						with open(datapath+'words.txt', 'a') as f: 
