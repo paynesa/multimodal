@@ -17,9 +17,9 @@ load_data.py takes in 3 mandatory command-line arguments, and one optional argum
 4. Optional: the location of the word embeddings, if it is different from the location given in #2
 
 Example:
-'''
+```
 python
-'''
+```
 
 ## Authors
 This code was developed by Minh Nguyen (Swarthmore) and Sarah Payne (University of Pennsylvania).
