@@ -10,11 +10,16 @@ This file loads and cleans your data before creating the training sets for the m
 
 load_data.py takes in 3 mandatory command-line arguments, and one optional argument. They are as follows: 
 1. The path to the directory in which you placed your unprocessed image embeddings
-2. The location where you would like the processed magnitude files and training sets to be saved
+2. The path to the directory where you would like the processed magnitude files and training sets to be saved
 3. How you would like the image embeddings to be processed:
-*'avg' if you would like to average all vectors corresponding to the same word
-*'iter' if you would like vectors corresponding to the same words to appear separately in the training set
-4. Optional:
+* 'avg' if you would like to average all vectors corresponding to the same word
+* 'iter' if you would like vectors corresponding to the same words to appear separately in the training set
+4. Optional: the location of the word embeddings, if it is different from the location given in #2
+
+Example:
+'''
+python
+'''
 
 ## Authors
 This code was developed by Minh Nguyen (Swarthmore) and Sarah Payne (University of Pennsylvania).
