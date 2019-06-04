@@ -16,13 +16,13 @@ load_data.py takes in 3 mandatory command-line arguments, and one optional argum
 * 'iter' if you would like vectors corresponding to the same words to appear separately in the training set
 4. Optional: the location of the word embeddings, if it is different from the location given in #2
 
-Example 1:
+#### Example 1:
 ```
 python3 load_data.py /home/data /home/results 'avg'
 ```
 Will load the image embeddings located in the 'data' folder and save the processed embeddings and training sets to 'results.' Repeated words' embeddings will be averaged. No 4th argument was given, so the word embeddings are located in 'results.'
 
-Example 2: 
+#### Example 2: 
 
 ```
 python3 load_data.py /home/data /home/results 'iter' /home/embeddings
