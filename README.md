@@ -1,9 +1,19 @@
 # Multimodal Embeddings
-This code offers a collection of models which can be trained to create multimodal embeddings for a variety of applications. We also offer options to 
+This code offers a collection of models which can be trained to create multimodal embeddings for a variety of applications. We also offer multiple options for data processing, including handling of repeated and OOV words and vectors.
 
-You should place all of your unprocessed image embeddings in .txt files in single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). 
+Before beginning, please ensure that your data is in a format that is compatable with this code. In order to be compatable, your word embeddings should be in the [magnitude](https://github.com/plasticityai/magnitude) format, which was developed by [Patel, Callison-Burch, et al. (2018)](https://www.cis.upenn.edu/~ccb/publications/magnitude-fast-efficient-vector-embeddings-in-python.pdf). You can convert most common filed formats to magnitude from the command line using the directions in the link above. Please name your output file [word.magnitude].
 
-Your word embeddings should be in the [magnitude](https://www.cis.upenn.edu/~ccb/publications/magnitude-fast-efficient-vector-embeddings-in-python.pdf) format, which can be achieved by converting them from the command line following the directions in the link above (you should name your output file word.magnitude). We recommend that you place word embeddings in a directory with nothing else in it (seperate from the location of your unprocessed image embeddings). It will then be possible to save your processed image embeddings to this directory, as well as to eventually place your training sets here.
+Additionally, you should place all unprocessed image embeddings in .txt file(s) in single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). Additionally, if the embeddings contain images that you do not want the model to be trained on, ensure that 'column-' comes at the beginning of the words that should be processed. You may also choose to place 'row-' at the beginning of the ones that should be processed. 
+
+#### Example:
+```
+'row-car' 0  1 .5 ...
+'column-cara' 0  1...
+'row-cat' 1  0.5 1...
+```
+would successfully exclude the Spanish word 'cara' so that only the English words 'car' and 'cat' are processed. 
+
+We recommend that you place word embeddings in a directory with nothing else in it (seperate from the location of your unprocessed image embeddings). It will then be possible to save your processed image embeddings and training sets to this dictionary.  
 
 ## load_data.py
 This file loads and cleans your data before creating the training sets for the model creation. 
