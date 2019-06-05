@@ -13,7 +13,7 @@ Additionally, you should place all unprocessed image embeddings in .txt file(s) 
 ```
 would successfully exclude the Spanish word 'cara' so that only the English words 'car' and 'cat' are processed. 
 
-We recommend that you place word embeddings in a directory with nothing else in it (seperate from the location of your unprocessed image embeddings). It will then be possible to save your processed image embeddings and training sets to this dictionary.  
+We recommend that you place your magnitude word embeddings in a directory with nothing else in it (seperate from the location of your unprocessed image embeddings). It will then be possible to save your processed image embeddings and training sets to this dictionary.  
 
 ## load_data.py
 This file loads and cleans your data before creating the training sets for the model creation. 
