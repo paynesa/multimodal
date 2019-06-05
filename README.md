@@ -39,7 +39,7 @@ python3 load_data.py --i /home/data --o /home/results iter --w /home/embeddings
 ```
 Will load the image embeddings located in the 'data' folder and save the processed embeddings and training sets to 'results.' Repeated words will not be averaged. A 4th argument was given, so the word embeddings are located in 'embeddings.'
 
-##### Output
+#### Output
 You will be notified as each file containing image embeddings is processed. Once all of the files have been processed, they will be converted to the magnitude format, and you will be notified of this as well. Finally, upon successful conversion, the training sets X_TRAIN and Y_TRAIN will be created, and you will be ready to work with the model of your choice.
 
 #### Note
