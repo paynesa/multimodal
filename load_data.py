@@ -1,153 +1,164 @@
-#Purpose:
-# - Collect image embeddings in one txt file, convert to Magnitude in command line 
-# - Create the training set (x_train, y_train)
-
-
-
-'''
-Arg vecs: 
-avg or not (default = don't average?) 
-folders /data1/minh/data
-data_path /data1/minh/multimodal/img_embedding.txt
-'''
-
-
-
-
+import sys, pickle, os, subprocess
 import numpy as np
-import pickle
-import pandas as pd 
-import os
-#from pymagnitude import *
+import pandas as pd
+from argparse import ArgumentParser
+from pymagnitude import *
+
+def parse_args():
+	parser = ArgumentParser()
+	parser.add_argument("--i", default=None, type=str, help = "the directory containing the unprocessed image embeddings")
+	parser.add_argument("--o", default=None, type=str, help = "the directory where you would like to save your training sets")
+	parser.add_argument("avg_iter", default=None, type=str, help = "how you would like to have your repeated embeddings handled (avg to average, iter to consider 		each one sepearately)")
+	parser.add_argument("--w", default=None, type=str, help = "the location of your word magnitude embeddings, if different from where you want to save your 		training sets")
+	args = parser.parse_args()
+	return args
+
+def avg_embeddings(source, datapath):
+	#iterate through the files
+	folders = os.listdir(source)
+	for f in folders:
+		print("Folder name: {}".format(f))
+		words = pd.read_csv(source+'/'+f, sep=' ', header=None).values
+		print("Done loading ", f, " from pandas")
+
+		start = 0
+		for i in range(words.shape[0]-1):
+			if words[i][0] != words[1+i][0]:
+				end = i+1
+
+				#average pooling
+				img_embedding = words[start:end, 1:]
+				average_embedding = img_embedding.sum(axis=0) /img_embedding.shape[0]
+
+				#check for NaNs and save embeddings to a txt file:
+				if False in pd.isnull(average_embedding):
+					average_embedding = np.insert(average_embedding, 0, words[i][0])
+					with open(datapath+'/imageembeddings.txt', 'a') as f:
+						np.savetxt(f, average_embedding.reshape(1, average_embedding.shape[0]), fmt="%s")
+					with open(datapath+'words.txt', 'a') as f:
+						f.write("{}\n".format(words[i][0]))
+				start = end
+
+			#stop once non-desired word appears
+			if 'column-' in words[i+1][0]:
+				print("Done loading desired (English) words from", f)
+				break 
 
 
-#create one image embedding for each word by average pooling all image feature vectors
-#@save img_embedding: a numpy array of image embeddings
-def create_image_embedding_avg():
-    # read the files that contain words and their image embeddings
-    # TODO: handle duplicates or not (maybe Magnitude will eventually handle this? 
+def iter_embeddings(source, datapath):
+	#iterate through the files
+	folders = os.listdir(source)
+	for f in folders:
+		print("Folder name: {}".format(f))
+		words = pd.read_csv(source+'/'+f, sep=' ', header=None).values
+		print("Done loading ", f, " from pandas")
 
-    folders = os.listdir('/data1/minh/data')
-    for f in folders:
-        print("Folder name: {}".format(f))
-        words = pd.read_csv('/data1/minh/data/'+f, sep=' ', header=None).values
-        print("Done loading from pandas")
-        
-        start = 0
-        for i in range(words.shape[0]-1):
+		start = 0
+		for i in range(words.shape[0]-1):
+			if words[i][0] != words[1+i][0]:
+				end = i+1
 
-            # only process English words, which start with 'row'
-            if words[i][0] != words[i+1][0]:
-                end = i+1
-                data_path = '/home/paynesa/testold'
-                img_embedding = words[start:end,1:]
+				#iterate through the words to count their occurrences and label them accordingly
+				b = str(words[i][0])
+				for j in range(end-start):
 
-                # average pooling to create one single image embedding
-                average_embedding = img_embedding.sum(axis=0) / img_embedding.shape[0]
-                average_embedding = np.insert(average_embedding, 0, words[i][0])
+					#check for NaNs and write to txt file
+					if False in pd.isnull(words[j, 1:]):
+						new = str(b) + "-" + str(j)
+						words[start+j][0] = new
+						z = words[start+j, :]
+						with open(datapath+'/imageembeddings.txt', 'a') as f:
+							np.savetxt(f, z.reshape(1, z.shape[0]), fmt = "%s")
+						with open(datapath+'/words.txt', 'a') as f:
+							f.write("{}\n".format(new))
+				start = end
 
-                # save all embeddings to txt, convert txt to magnitude in cmd line 
-                with open(data_path, 'a') as f:
-                    np.savetxt(f, average_embedding.reshape(1, average_embedding.shape[0]), fmt="%s")
-                start = i+1
-            
-            if 'column-' in words[i+1][0]:
-                print("Number of English words: {}".format(i/10))
-                break
-    print("Done average pooling")
+			#stop as soon as a non-English word is reached
+			if 'column-' in words[i+1][0]:
+				print("Done loading desired (English) words from", f)
+				break
 
+def create_training_set(datapath, w = None):
+	oov_counter = 0
+	img_dict = Magnitude(datapath+'/image.magnitude')
+	if (w == None):
+		word_dict = Magnitude(datapath+'/word.magnitude')
+	else:
+		word_dict = Magnitude(w)
 
-def create_image_embedding():
-  
-  """
-    create one image embedding for each word by average pooling all image feature vectors
-    @save img_embedding: a numpy array of image embeddings 
-    """
-    # read the files that contain words and their image embeddings
-    # TODO: handle duplicates or not (maybe Magnitude will eventually handle this? 
-folders = os.listdir('/data1/minh/data')
-for f in folders:
-        print("Folder name: {}".format(f))
-        words = pd.read_csv('/data1/minh/data/'+f, sep=' ', header=None).values
-        print("Done loading from pandas")
-        
-        start = 0
-        for i in range(words.shape[0]-1):
-            # only process English words, which start with 'row'
-            if words[i][0] != words[i+1][0]:
-                end = i+1
-                data_path = '/home/paynesa/t'
-                img_embedding = words[start:end,1:]
-                     for j in range(img_embedding.shape[1]):
-                                w = words[i][0]
-                                w += "-" + str(j)
-                                print(w)
-                                np.insert(img_embedding[j], 0, w)
-                # save all embeddings to txt, convert txt to magnitude in cmd line 
-                with open(data_path, 'a') as f:
-                    np.savetxt(f, img_embedding, fmt="%s")
-                start = i+1
-            
-            if 'column-' in words[i+1][0]:
-                print("Number of English words: {}".format(i/10))
-                break
-print("Done")
+	#process the words
+	for line in open(datapath+'/words.txt', 'r'):
+		word = line.strip()
+		if "row" in word:
+			phrase = word.split('-')[1]
+		else:
+			phrase = word.split('-')[0]
+		if "_" in phrase:
+			word_list = phrase.split('_')
+			phrase = ""
+			for i in range(len(word_list)):
+				phrase += word_list[i]
+				if i < len(word_list)-1:
+					phrase += " "
+		with open(datapath+'/words_processed.txt', 'a') as f:
+			f.write("{}\n".format(phrase))
 
+		#Controlling for OOV words and writing the embeddings to the corresponding training files
+		#TODO: compare results when using OOV functionality to not
+		if (phrase in word_dict) and (word in img_dict):
+			word_embedding = word_dict.query(phrase)
+			img_embedding = img_dict.query(word)
+			if (False in pd.isnull(np.asarray(word_embedding))) and (False in pd.isnull(np.asarray(img_embedding))):
+				with open(datapath+'/x_train.txt', 'a') as f:
+					np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
+				with open(datapath+'/y_train.txt', 'a') as f:
+					np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
+		else:
+			oov_counter += 1
+	print(oov_counter, "out-of-vocabulary words found")
 
+def main():
+	#define vars
+	args = parse_args()
+	src = args.i
+	data = args.o
+	avg = args.avg_iter
+	wordmag = args.w
 
-'''
-Arg vecs: 
-avg or not (default = don't average?) 
-folders /data1/minh/data
-data_path /data1/minh/multimodal/img_embedding.txt
-'''
+	#check arguments for null arguments and invalid averaging arg
+	if (src == None) or (data == None) or ((avg!= 'avg') and (avg!='iter')):
+		print("ERROR: You must pass in 3-4 command-line arguments:\n --i The location of the files\n --o The path to the directory where you would like the 			embeddings and dictionaries to be written\n 3. The averaging of the vectors:\n\t\'avg\' for averaging\n\t\'iter\' for non-averaging and labelling with 			iteration\n 4. --w (optional): location of the word embeddings, which should be labelled 'word.magnitude', if different than the directory given in 2")
+		quit()
+	else:
+		print("Loading your embeddings...")
 
+	########################### BEGIN COMMENTING HERE IF MAGNITUDE CONVERSION FAILS #######################################################
+	#load and process the image vectors
 
+	if avg == 'avg':
+		avg_embeddings(src, data)
+		print("Done average pooling. Your averaged embeddings have been saved to ", data)
+	if avg == 'iter': 
+		iter_embeddings(src, data)
+		print("Done iterating. Your iterated embeddings have been saved to ", data)
 
-def create_train_set():
-    """
-    create the train set (x_train, y_train)
-    @return x_train, y_train
-    """
-    words = pd.read_csv('/data1/minh/multimodal/img_embedding.txt', sep=' ', header=None).values
-    # save all words in a txt file 
-    np.savetxt('/data1/minh/multimodal/words.txt', words[:,0], fmt="%s")
-    word_dict = Magnitude('/data1/embeddings/pymagnitude/word.magnitude')
-    img_dict = Magnitude('/data1/embeddings/pymagnitude/image.magnitude')
-    
-    # TODO: skip over words with all NaNs    
- 
-    # create a file of processed words (no annotations of translation)
-    # query for processed words' embeddings
-    for i in range(words.shape[0]):
-        unprocessed_word = words[i][0]
-        # convert word, e.g row-writings to writings 
-        if "row" in words[i][0]:
-            phrase = words[i][0].split('-')[1]
-        if "_" in words[i][0]:
-            word_list = phrase.split('_')
-            word = ""
-            for i in range(len(word_list)):
-                word += word_list[i]
-                if i < len(word_list)-1:
-                    word += " "
-            phrase = word 
-        
-        with open('/data1/minh/multimodal/words_processed.txt', 'a') as f:
-            f.write("{}\n".format(phrase))
-        word_embedding = word_dict.query(phrase)
-        img_embedding = img_dict.query(unprocessed_word)
+	#convert the resulting file to magnitude
+	print("Converting to magnitude format...")
+	i = data+"/imageembeddings.txt"
+	o = data+"/image.magnitude"
+	cmd = ("python3.6 -m pymagnitude.converter -i "+i+" -o "+o).split()
+	try:
+		subprocess.check_output(cmd)
+	except:
+		print("There was an error converting your file ", data+'/imageembeddings.txt', " to the magnitude format. Please try to do so manually")
+		quit()
+	print("Magnitude conversion successful!")
 
-        # check if a word has valid image vectors 
-        # valid: image vectors doesn't contain all NaNs
-        # check_nan = np.isnan(img_embedding)
-        # all_nan = check_nan[check_nan==True].shape[0]
-        # if all_nan == img_embedding.shape[0]:
-            
-        # add to x_train and y_train
-        with open('/data1/minh/multimodal/x_train.txt', 'a') as f:
-            np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
-        with open('/data1/minh/multimodal/y_train.txt', 'a') as f:
-            np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
+	########################### END COMMENTING HERE IF MAGNITUDE CONVERSION FAILS #######################################################		
+	#create the training set
+	print("Creating training sets... (this could take a while)")
+	create_training_set(data, wordmag)
+	print("Training set creation complete!")
 
-create_image_embedding_avg()
+if __name__ == '__main__':
+	main()
