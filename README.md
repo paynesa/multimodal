@@ -19,28 +19,31 @@ We recommend that you place word embeddings in a directory with nothing else in 
 This file loads and cleans your data before creating the training sets for the model creation. 
 
 load_data.py takes in 3 mandatory command-line arguments, and one optional argument. They are as follows: 
-1. The path to the directory in which you placed your unprocessed image embeddings
-2. The path to the directory where you would like the processed magnitude files and training sets to be saved
-3. How you would like the image embeddings to be processed:
+--i The path to the directory in which you placed your unprocessed image embeddings
+--o The path to the directory where you would like the processed magnitude files and training sets to be saved
+How you would like the image embeddings to be processed:
 * 'avg' if you would like to average all vectors corresponding to the same word
 * 'iter' if you would like vectors corresponding to the same words to appear separately in the training set
-4. Optional: the location of the word embeddings, if it is different from the location given in #2
+--w (optional) the location of the word embeddings, if it is different from the location given in #2 
 
 #### Example 1:
 ```
-python3 load_data.py /home/data /home/results 'avg'
+python3 load_data.py --i /home/data --o /home/results avg
 ```
 Will load the image embeddings located in the 'data' folder and save the processed embeddings and training sets to 'results.' Repeated words' embeddings will be averaged. No 4th argument was given, so the word embeddings are located in 'results.'
 
 #### Example 2: 
 
 ```
-python3 load_data.py /home/data /home/results 'iter' /home/embeddings
+python3 load_data.py --i /home/data --o /home/results iter --w /home/embeddings
 ```
 Will load the image embeddings located in the 'data' folder and save the processed embeddings and training sets to 'results.' Repeated words will not be averaged. A 4th argument was given, so the word embeddings are located in 'embeddings.'
 
 ##### Output
-You will be notified as each file containing image embeddings is processed. Once all of the files have been processed, they will be converted to the magnitude format, and you will be notified of this as well. Finally, upon successful conversion, the training sets X_TRAIN and Y_TRAIN will be created, and you will be ready to work with the model of your choice. 
+You will be notified as each file containing image embeddings is processed. Once all of the files have been processed, they will be converted to the magnitude format, and you will be notified of this as well. Finally, upon successful conversion, the training sets X_TRAIN and Y_TRAIN will be created, and you will be ready to work with the model of your choice.
+
+#### Note
+If magnitude conversion is not successful, you may need to convert the text file to magnitude on the command-line. Then, to create the training sets, open load_data.py, comment out the indicated lines, and re-run it. 
 
 ## Authors
 This code was developed by Minh Nguyen (Swarthmore) and Sarah Payne (University of Pennsylvania).
