@@ -19,11 +19,15 @@ Additionally, you should place all unprocessed image embeddings in .txt file(s) 
 This file loads and cleans your data before creating the training sets for the model creation. 
 
 load_data.py takes in 3 mandatory command-line arguments, and one optional argument. They are as follows: 
+
 --i The path to the directory in which you placed your unprocessed image embeddings
+
 --o The path to the directory where you would like the processed magnitude files and training sets to be saved
+
 How you would like the image embeddings to be processed:
 * 'avg' if you would like to average all vectors corresponding to the same word
 * 'iter' if you would like vectors corresponding to the same words to appear separately in the training set
+
 --w (optional) the location of the word embeddings, if it is different from the location given in #2 
 
 #### Example 1:
