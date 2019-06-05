@@ -3,7 +3,7 @@ This code offers a collection of models which can be trained to create multimoda
 
 Before beginning, please ensure that your data is in a format that is compatable with this code. In order to be compatable, your word embeddings should be in the [magnitude](https://github.com/plasticityai/magnitude) format, which was developed by [Patel, Callison-Burch, et al. (2018)](https://www.cis.upenn.edu/~ccb/publications/magnitude-fast-efficient-vector-embeddings-in-python.pdf). You can convert most common file-formats to magnitude from the command line using the directions in the link above. Please name your output file [word.magnitude].
 
-Additionally, you should place all unprocessed image embeddings in .txt file(s) in single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). Additionally, if the embeddings contain images that you do not want the model to be trained on, ensure that 'column-' comes at the beginning of the words that should be processed. You may also choose to place 'row-' at the beginning of the ones that should be processed. 
+Additionally, you should place all unprocessed image embeddings in .txt file(s) in a single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). Additionally, if the embeddings contain images that you do not want the model to be trained on, ensure that 'column-' comes at the beginning of the words that should be processed. You may also choose to place 'row-' at the beginning of the ones that should be processed. 
 
 #### Example:
 ```
