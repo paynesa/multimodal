@@ -52,6 +52,24 @@ If magnitude conversion is not successful, you may need to convert the text file
 ## model.py
 This file creates and trains models and saves them and predictions. Additionally, it can load existing models and make predictions with them. Model.py takes in the following arguments:
 
+--lr The learning rate (default = 0.1 for both models)
+
+--u Number of hidden units for the neural model (default = 300)
+
+--e Number of epochs for training (default = 25 for neural net, 175 for linear)
+
+--s Path for saving model if you are creating a new model
+
+--l path to existing model if loading existing model
+
+--i path to the directory containing x_train and y_train if training a new model
+
+--p path to the directory containing prediction sets if different from that given in (i)
+
+The type of model:
+* linear
+* neural
+
 
 
 ## Authors
