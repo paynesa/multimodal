@@ -1,3 +1,4 @@
+#TODO add try except for issues with files, raise exceptions
 import sys, pickle, os, subprocess
 import numpy as np
 import pandas as pd
@@ -33,10 +34,13 @@ def avg_embeddings(source, datapath):
 				#check for NaNs and save embeddings to a txt file:
 				if False in pd.isnull(average_embedding):
 					average_embedding = np.insert(average_embedding, 0, words[i][0])
-					with open(datapath+'/imageembeddings.txt', 'a') as f:
-						np.savetxt(f, average_embedding.reshape(1, average_embedding.shape[0]), fmt="%s")
-					with open(datapath+'words.txt', 'a') as f:
-						f.write("{}\n".format(words[i][0]))
+					try:
+						with open(datapath+'/imageembeddings.txt', 'a') as f:
+							np.savetxt(f, average_embedding.reshape(1, average_embedding.shape[0]), fmt="%s")
+						with open(datapath+'words.txt', 'a') as f:
+							f.write("{}\n".format(words[i][0]))
+					except:
+						raise Exception("Error saving embeddings. Check file path")
 				start = end
 
 			#stop once non-desired word appears
@@ -67,10 +71,14 @@ def iter_embeddings(source, datapath):
 						new = str(b) + "-" + str(j)
 						words[start+j][0] = new
 						z = words[start+j, :]
-						with open(datapath+'/imageembeddings.txt', 'a') as f:
-							np.savetxt(f, z.reshape(1, z.shape[0]), fmt = "%s")
-						with open(datapath+'/words.txt', 'a') as f:
-							f.write("{}\n".format(new))
+						try:
+							with open(datapath+'/imageembeddings.txt', 'a') as f:
+								np.savetxt(f, z.reshape(1, z.shape[0]), fmt = "%s")
+							with open(datapath+'/words.txt', 'a') as f:
+								f.write("{}\n".format(new))
+						except:
+							raise Exception("Error saving embeddings. Check file path")		
+	
 				start = end
 
 			#stop as soon as a non-English word is reached
@@ -100,19 +108,24 @@ def create_training_set(datapath, w = None):
 				phrase += word_list[i]
 				if i < len(word_list)-1:
 					phrase += " "
-		with open(datapath+'/words_processed.txt', 'a') as f:
-			f.write("{}\n".format(phrase))
+		try:
+			with open(datapath+'/words_processed.txt', 'a') as f:
+				f.write("{}\n".format(phrase))
+		except:
+			raise Exception("Error saving processed words")
 
 		#Controlling for OOV words and writing the embeddings to the corresponding training files
-		#TODO: compare results when using OOV functionality to not
 		if (phrase in word_dict) and (word in img_dict):
 			word_embedding = word_dict.query(phrase)
 			img_embedding = img_dict.query(word)
 			if (False in pd.isnull(np.asarray(word_embedding))) and (False in pd.isnull(np.asarray(img_embedding))):
-				with open(datapath+'/x_train.txt', 'a') as f:
-					np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
-				with open(datapath+'/y_train.txt', 'a') as f:
-					np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
+				try:
+					with open(datapath+'/x_train.txt', 'a') as f:
+						np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
+					with open(datapath+'/y_train.txt', 'a') as f:
+						np.savetxt(f, img_embedding.reshape(1, img_embedding.shape[0]))
+				except:
+					raise Exception("error saving training sets")
 		else:
 			oov_counter += 1
 	print(oov_counter, "out-of-vocabulary words found")
@@ -127,8 +140,7 @@ def main():
 
 	#check arguments for null arguments and invalid averaging arg
 	if (src == None) or (data == None) or ((avg!= 'avg') and (avg!='iter')):
-		print("ERROR: You must pass in 3-4 command-line arguments:\n --i The location of the files\n --o The path to the directory where you would like the 			embeddings and dictionaries to be written\n 3. The averaging of the vectors:\n\t\'avg\' for averaging\n\t\'iter\' for non-averaging and labelling with 			iteration\n 4. --w (optional): location of the word embeddings, which should be labelled 'word.magnitude', if different than the directory given in 2")
-		quit()
+		raise Exception("ERROR: You must pass in 3-4 command-line arguments:\n --i The location of the files\n --o The path to the directory where you would like the 			embeddings and dictionaries to be written\n 3. The averaging of the vectors:\n\t\'avg\' for averaging\n\t\'iter\' for non-averaging and labelling with 			iteration\n 4. --w (optional): location of the word embeddings, which should be labelled 'word.magnitude', if different than the directory given in 2")
 	else:
 		print("Loading your embeddings...")
 
@@ -150,8 +162,7 @@ def main():
 	try:
 		subprocess.check_output(cmd)
 	except:
-		print("There was an error converting your file ", data+'/imageembeddings.txt', " to the magnitude format. Please try to do so manually")
-		quit()
+		raise Exception("There was an error converting your file ", data+'/imageembeddings.txt', " to the magnitude format. Please try to do so manually")
 	print("Magnitude conversion successful!")
 
 	########################### END COMMENTING HERE IF MAGNITUDE CONVERSION FAILS #######################################################		
