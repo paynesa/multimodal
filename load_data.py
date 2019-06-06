@@ -108,11 +108,6 @@ def create_training_set(datapath, w = None):
 				phrase += word_list[i]
 				if i < len(word_list)-1:
 					phrase += " "
-		try:
-			with open(datapath+'/words_processed.txt', 'a') as f:
-				f.write("{}\n".format(phrase))
-		except:
-			raise Exception("Error saving processed words")
 
 		#Controlling for OOV words and writing the embeddings to the corresponding training files
 		if (phrase in word_dict) and (word in img_dict):
@@ -120,6 +115,8 @@ def create_training_set(datapath, w = None):
 			img_embedding = img_dict.query(word)
 			if (False in pd.isnull(np.asarray(word_embedding))) and (False in pd.isnull(np.asarray(img_embedding))):
 				try:
+					with open(datapath+'/words_processed.txt', 'a') as f:
+						f.write("{}\n".format(phrase))
 					with open(datapath+'/x_train.txt', 'a') as f:
 						np.savetxt(f, word_embedding.reshape(1, word_embedding.shape[0]))
 					with open(datapath+'/y_train.txt', 'a') as f:
