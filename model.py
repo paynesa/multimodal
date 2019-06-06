@@ -26,7 +26,10 @@ class MultimodalEmbedding:
 
 	def build_linear_model(self):
 		self.model = Sequential()
-		self.model.add(Dense(4096, input_shape=(300,)))
+		if (self.args.u == None):
+			self.model.add(Dense(4096, input_shape=(300,)))
+		else:
+			self.model.add(Dense(4096, input_shape=(self.args.u,)))
 		self.model.add(Dropout(0.1))
 		self.model.summary()
 		sgd = SGD(lr=self.args.lr)
@@ -47,7 +50,12 @@ class MultimodalEmbedding:
 		else:
 			self.build_neural_net()
 		print("Training initialized...")
-		history = self.model.fit(self.x_train, self.y_train, epochs=self.args.e, verbose=1)
+		if (self.args.e != None):
+			history = self.model.fit(self.x_train, self.y_train, epochs=self.args.e, verbose=1)
+		elif (self.args.model == linear):
+			history = self.model.fit(self.x_train, self.y_train, epochs=175, verbose=1)
+		else:
+			history = self.model.fit(self.x_train, self.y_train, epochs=25, verbose=1)
 		print("Training complete. Saving model..")
 		try:
 			self.model.save(self.args.s+'.h5')
@@ -107,6 +115,8 @@ def main():
 	args = parse_args()	
 	if (args.model != "linear") and (args.model != "neural"):
 		raise Exception("You must input a valid model type (linear or neural)")
+	if (args.p == None) and (args.i == None):
+		raise Exception("You must give a location of your prediction files")
 
 	#if args.s: train, save and load model in one go. if args.l: load an old model for prediction
 	if (args.s != None):
