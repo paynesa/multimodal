@@ -70,6 +70,26 @@ The type of model:
 * linear
 * neural
 
+#### Example 1:
+```
+python3 model.py linear --i /home/trainingdata --s /home/model
+```
+Creates a linear model with default parameters (0.1 learning rate; 175 epochs) and saves it to /home/model. The directory /home/trainingdata contaings x_train and y_train as will as the prediction sets.
+
+#### Example 2:
+```
+python3 model.py neural --i /home/trainingdata --s /home/model --u 200 --lr 0.01 --e 100 --p /home/predictions
+```
+Creates a neural model with 200 hidden units, a learning rate of 0.01, and 100 epochs. It then saves predictions based off of files in /home/predictions and saves the model and these predictions to /home/model.
+
+#### Example 3: 
+```
+python3 model.py linear --l /home/model/linear_model --p /home/predictions
+```
+Opens the existing linear model located at /home/model/linear_model and makes predictions based off of the files stored in /home/predictions. These predictions will be saved to /home/model/.
+
+#### Output
+You will be notified when your model is created/loaded, when it is trained if you are training a new model, and when the predictions are being run and saved. 
 
 
 ## Authors
