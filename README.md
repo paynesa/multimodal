@@ -19,7 +19,7 @@ Additionally, you should place all unprocessed image embeddings in .txt file(s) 
 This file loads and cleans your data before creating the training sets for the model creation. 
 
 load_data.py takes in 3 mandatory command-line arguments, and one optional argument. They are as follows: 
-```
+
 --i The path to the directory in which you placed your unprocessed image embeddings
 
 --o The path to the directory where you would like the processed magnitude files and training sets to be saved
@@ -29,7 +29,7 @@ How you would like the image embeddings to be processed:
 * 'iter' if you would like vectors corresponding to the same words to appear separately in the training set
 
 --w (optional) the location of the word embeddings, if it is different from the location given in #2 
-```
+
 #### Example 1:
 ```
 python3 load_data.py --i /home/data --o /home/results avg
@@ -50,7 +50,9 @@ You will be notified as each file containing image embeddings is processed. Once
 If magnitude conversion is not successful, you may need to convert the text file to magnitude on the command-line. Then, to create the training sets, open load_data.py, comment out the indicated lines, and re-run it. 
 
 ## model.py
-This file creates and trains models and saves them and predictions. Additionally, it can load existing models 
+This file creates and trains models and saves them and predictions. Additionally, it can load existing models and make predictions with them. Model.py takes in the following arguments:
+
+
 
 ## Authors
 This code was developed by Minh Nguyen (Swarthmore) and Sarah Payne (University of Pennsylvania).
