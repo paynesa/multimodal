@@ -1,23 +1,13 @@
-"""
-Purpose:
-- Train models 
-- Predict embeddings
-- Save embeddings to dictionaries 
-"""
-
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense, Dropout
 from keras.optimizers import SGD
-from keras.models import load_model
-
 from argparse import ArgumentParser
 import pandas as pd
 import pickle
 
 
-#This class builds a linear model and a neural net that learns the mappting from word embeddigns to image embeddings
+#This class builds a linear model and a neural net that learns the mapping from word embeddings to image embeddings
 class MultimodalEmbedding:
-
 	def __init__(self, x_train, y_train, args):
 		self.x_train = x_train
 		self.y_train = y_train
@@ -26,10 +16,7 @@ class MultimodalEmbedding:
 
 	def build_linear_model(self):
 		self.model = Sequential()
-		if (self.args.u == None):
-			self.model.add(Dense(4096, input_shape=(300,)))
-		else:
-			self.model.add(Dense(4096, input_shape=(self.args.u,)))
+		self.model.add(Dense(4096, input_shape=(300,)))
 		self.model.add(Dropout(0.1))
 		self.model.summary()
 		sgd = SGD(lr=self.args.lr)
@@ -47,15 +34,18 @@ class MultimodalEmbedding:
 	def start_training(self):
 		if (self.args.model == "linear"):
 			self.build_linear_model()
+			print("Training initialized...")
+			if (self.args.e == None):
+				 history = self.model.fit(self.x_train, self.y_train, epochs=175, verbose=1)
+			else:
+				 history = self.model.fit(self.x_train, self.y_train, epochs=self.args.e, verbose=1)
 		else:
 			self.build_neural_net()
-		print("Training initialized...")
-		if (self.args.e != None):
-			history = self.model.fit(self.x_train, self.y_train, epochs=self.args.e, verbose=1)
-		elif (self.args.model == linear):
-			history = self.model.fit(self.x_train, self.y_train, epochs=175, verbose=1)
-		else:
-			history = self.model.fit(self.x_train, self.y_train, epochs=25, verbose=1)
+			print("Training initialized...")
+			if (self.args.e == None):
+				history = self.model.fit(self.x_train, self.y_train, epochs=25, verbose=1)
+			else:
+				history = self.model.fit(self.x_train, self.y_train, epochs=self.args.e, verbose=1)
 		print("Training complete. Saving model..")
 		try:
 			self.model.save(self.args.s+'.h5')
@@ -75,8 +65,12 @@ class MultimodalEmbedding:
 		return learned_embedding
 
 # save dictionary of predicted embeddings
-def save_prediction(word_list, list_type, pred_embedding, path):
+def save_prediction(word_list, list_type, pred_embedding, args):
 	word_dict = dict(zip(word_list, pred_embedding))
+	if args.s:
+		path = args.s
+	else:
+		path = args.l
 	with open(path+"_"+list_type+".p", 'wb') as fp:
 		try:
 			pickle.dump(word_dict, fp, protocol=pickle.HIGHEST_PROTOCOL)
@@ -95,20 +89,20 @@ def merge_dict(dict1, dict2, path):
 		except:
 			raise Exception("There was a problem saving your merged predictions")
 
-
 #parse arguments set by user
 def parse_args():
 	parser = ArgumentParser()
 	parser.add_argument("model", default=None, type=str, help="[linear, neural]")
 	parser.add_argument("--lr", default=0.1, type=int, help="learning rate, default=0.1 for both models")
 	parser.add_argument("--u", default=300, type=int, help="num of hidden units for neural net")
-	parser.add_argument("--e", default=25, type=int, help="num of epochs for training, default=25 for neural net, 175 for linear")
+	parser.add_argument("--e", default=None, type=int, help="num of epochs for training, default=25 for neural net, 175 for linear")
 	parser.add_argument("--s", type=str, help="path for saving model")
 	parser.add_argument("--l", type=str, help="path for loading model")
 	parser.add_argument("--i", type=str, help="path to the directory containing x_train and y_train")
-	parser.add_argument("--p", type=str, help="path to the directory containing prediction sets if different than the path given in --i")
+	parser.add_argument("--p", type=str, help="path to the directory containing prediction sets")
 	args = parser.parse_args()
 	return args
+
 
 def main():
 	#raise an exception if the user does not have a valid model type
@@ -156,5 +150,10 @@ def main():
 	# merge word_dict_zs and word_dict_vis 
 	merge_dict(word_dict_zs, word_dict_vis, model_path)
 
+
 if __name__=='__main__':
 	main()
+
+
+
+
