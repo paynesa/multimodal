@@ -1,9 +1,9 @@
 # Multimodal Embeddings
-This code offers a collection of models which can be trained to create multimodal embeddings for a variety of applications. We also offer multiple options for data processing, including handling of repeated and OOV words and vectors.
+This code offers a collection of models which can be trained to create multimodal embeddings for a variety of applications. We also offer multiple options for data processing, including handling of repeated and OOV words.
 
 Before beginning, please ensure that your data is in a format that is compatable with this code. In order to be compatable, your word embeddings should be in the [magnitude](https://github.com/plasticityai/magnitude) format, which was developed by [Patel, Callison-Burch, et al. (2018)](https://www.cis.upenn.edu/~ccb/publications/magnitude-fast-efficient-vector-embeddings-in-python.pdf). You can convert most common file-formats to magnitude from the command line using the directions in the link above. Please name your output file [word.magnitude].
 
-Additionally, if your unprocessed image embeddings contain images that you do not want the model to be trained on, ensure that 'column-' comes at the beginning of the words that should be processed. You may also choose to place 'row-' at the beginning of the ones that should be processed. 
+Additionally, if your unprocessed image embeddings contain images that you do not want the model to be trained on, ensure that 'column-' comes at the beginning of the words that should not be processed. You may also choose to place 'row-' at the beginning of the ones that should be processed. 
 
 #### Example:
 ```
@@ -13,7 +13,7 @@ Additionally, if your unprocessed image embeddings contain images that you do no
 ```
 would successfully exclude the Spanish word 'cara' so that only the English words 'car' and 'cat' are processed. 
 
-Additionally, you should place all unprocessed image embeddings in .txt file(s) in a single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). We further recommend that you place your magnitude word embeddings in a directory with nothing else in it (seperate from the location of your unprocessed image embeddings). In this directory, you should also create two subdirectories: OOV and no_OOV. It will then be possible to save your processed image embeddings and training sets to this directory, placing the corresponding training sets in OOV and no_OOV subdirectories. 
+Additionally, you should place all unprocessed image embeddings in .txt file(s) in a single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). We further recommend that you place your magnitude word embeddings in a directory with nothing else in it (separate from the location of your unprocessed image embeddings). In this directory, you should also create two subdirectories: OOV and no_OOV. It will then be possible to save your processed image embeddings and training sets to this directory, placing the corresponding training sets in OOV and no_OOV subdirectories depending on whether or not they include OOV word embeddings. 
 
 ## load_data.py
 This file loads and cleans your data before creating the training sets for the model creation. 
@@ -28,7 +28,7 @@ How you would like the image embeddings to be processed:
 * 'avg' if you would like to average all vectors corresponding to the same word
 * 'iter' if you would like vectors corresponding to the same words to appear separately in the training set
 
---w (optional) the location of the word embeddings, if it is different from the location given in #2 
+--w (optional) the location of the word embeddings, if it is different from the location given in --o
 
 #### Example 1:
 ```
