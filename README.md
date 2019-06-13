@@ -13,7 +13,7 @@ Additionally, if your unprocessed image embeddings contain images that you do no
 ```
 would successfully exclude the Spanish word 'cara' so that only the English words 'car' and 'cat' are processed. 
 
-Additionally, you should place all unprocessed image embeddings in .txt file(s) in a single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). We further recommend that you place your magnitude word embeddings in a directory with nothing else in it (seperate from the location of your unprocessed image embeddings). It will then be possible to save your processed image embeddings and training sets to this dictionary.  
+Additionally, you should place all unprocessed image embeddings in .txt file(s) in a single directory with nothing else in it. These text files must be readable by [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html). We further recommend that you place your magnitude word embeddings in a directory with nothing else in it (seperate from the location of your unprocessed image embeddings). In this directory, you should also create two subdirectories: OOV and no_OOV. It will then be possible to save your processed image embeddings and training sets to this directory, placing the corresponding training sets in OOV and no_OOV subdirectories. 
 
 ## load_data.py
 This file loads and cleans your data before creating the training sets for the model creation. 
