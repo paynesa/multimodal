@@ -92,5 +92,26 @@ Opens the existing linear model located at /home/model/linear_model and makes pr
 You will be notified when your model is created/loaded, when it is trained if you are training a new model, and when the predictions are being run and saved. 
 
 
+## evaluation.py
+This file evaluates the predictions of the model against the following similarity tests: 
+* Wordsim_sim
+* Wordsim_rel
+* SimLex
+* MEN
+* SemSim
+* VisSim
+Additionally, it evaluates on the entire sets, on VIS words in these sets, and on ZS words in these sets. The paths to these evaluation files are currently hard-coded but will be updated soon. 
+
+evaluation.py takes in the following arguments:
+
+type of evalution:
+ * normal for simply evaluating the predictions of the model
+ * c_linear or c_neural to evaluate the predictions concatenated with the GloVe vectors
+ 
+path to the model and the predictions
+
+--w the path to the word vectors if evaluating a concatenated model
+
+
 ## Authors
 This code was developed by Minh Nguyen (Swarthmore) and Sarah Payne (University of Pennsylvania).
