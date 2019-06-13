@@ -114,13 +114,13 @@ path to the model and the predictions
 
 #### Example 1:
 ```
-python3 evaluation.py normal home/model/linear
+python3 evaluation.py normal /home/model/linear
 ```
 Will evaluate the predictions of the model linear.h5, located in /home/model/. It will not concatenate the predictions with GloVe vectors.
 
 #### Example 2: 
 ```
-python3 evaluation.py c_neural /home/neural_model --w home/wordembeddings/word.magnitude
+python3 evaluation.py c_neural /home/neural_model --w /home/wordembeddings/word.magnitude
 ```
 Will evaluate the predictions of the model neural_model.h5, located in /home/. It will concatenate these predictions with the word embeddings located at /home/wordembeddings/word.magnitude and evaluate the concatenated predictions against the human evaluations. 
 
