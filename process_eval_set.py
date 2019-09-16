@@ -33,7 +33,7 @@ def split_eval(eval_set_list):
 	for eval_set in eval_set_list:
 		for i in range(eval_set.shape[0]):
 		# check if both words in the word pair have image embeddings 
-		 	if eval_set[i][0] in vis_words and eval_set[i][1] in vis_words:
+			if eval_set[i][0] in vis_words and eval_set[i][1] in vis_words:
 				with open(path+str(counter)+'_vis.txt', 'a') as f:
 					np.savetxt(f, eval_set[i].reshape(1, eval_set[i].shape[0]), fmt='%s')
 			else:
@@ -54,19 +54,19 @@ def aggregate_set(eval_set_type):
 			eval_set = pd.read_csv(path+str(i) + '_zs.txt', sep= ' ', header=None).values
 		for i in range(eval_set.shape[0]):
 		# if this word has never been added to the prediction set
-		if check_duplicates_dict.get(eval_set[i][0]) is None:
-			word1 = word_dict.query(eval_set[i][0]).astype('<U100')
-			word1 = np.insert(word1, 0, eval_set[i][0])
-			with open('/data1/minh/multimodal/pred_set_'+eval_set_type+'.txt', 'a') as f:
-				np.savetxt(f, word1.reshape(1, word1.shape[0]), fmt='%s')
-			check_duplicates_dict[eval_set[i][0]] = 1
+			if check_duplicates_dict.get(eval_set[i][0]) is None:
+				word1 = word_dict.query(eval_set[i][0]).astype('<U100')
+				word1 = np.insert(word1, 0, eval_set[i][0])
+				with open('/data1/minh/multimodal/pred_set_'+eval_set_type+'.txt', 'a') as f:
+					np.savetxt(f, word1.reshape(1, word1.shape[0]), fmt='%s')
+				check_duplicates_dict[eval_set[i][0]] = 1
 
-		if check_duplicates_dict.get(eval_set[i][1]) is None:
-			word2 = word_dict.query(eval_set[i][1]).astype('<U100')
-			word2 = np.insert(word2, 0, eval_set[i][1])
-			with open('/data1/minh/multimodal/pred_set_'+eval_set_type+'.txt', 'a') as f:
-				np.savetxt(f, word2.reshape(1, word2.shape[0]), fmt='%s')
-			check_duplicates_dict[eval_set[i][1]] = 1
+			if check_duplicates_dict.get(eval_set[i][1]) is None:
+				word2 = word_dict.query(eval_set[i][1]).astype('<U100')
+				word2 = np.insert(word2, 0, eval_set[i][1])
+				with open('/data1/minh/multimodal/pred_set_'+eval_set_type+'.txt', 'a') as f:
+					np.savetxt(f, word2.reshape(1, word2.shape[0]), fmt='%s')
+				check_duplicates_dict[eval_set[i][1]] = 1
 
 ########################################################################################################################################################################
 ####################All functions below process data for word similarity classifier experiment, which doesn't improve similarity scores#################################
